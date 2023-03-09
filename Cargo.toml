@@ -1,0 +1,16 @@
+[package]
+name = "kuzu-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# autocxx = "0.23.1"
+# cxx = "1.0.86"
+# kuzu-src = {path = "../kuzu-src"}
+[build-dependencies]
+cmake = "0.1.49"
+
+[examples]
+name = "ex1"
