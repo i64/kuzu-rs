@@ -17,12 +17,12 @@ pub(crate) fn drop_logger(logger_type: LoggerEnum) {
     unsafe { ffi::kuzu_common_LoggerUtils_dropLogger(logger_type as u8) }
 }
 
-pub(crate) fn into_cstr<S: AsRef<str>>(inp: S) -> Result<(CString, usize), NulError> {
+pub(crate) fn into_cstr<S: AsRef<str>>(inp: S) -> Result<(&'static CString, usize), NulError> {
     let raw_str = inp.as_ref();
-    let cstring = CString::new(raw_str)?;
+    let cstring = Box::new(CString::new(raw_str)?);
 
     let len = cstring.as_bytes().len();
-    Ok((cstring, len))
+    Ok((Box::leak(cstring), len))
 }
 mod ffi {
     extern "C" {

@@ -14,10 +14,5 @@ fn main() {
         //dbg!(2);
         let res =
             connection.query("CREATE NODE TABLE User(name STRING, age INT64, PRIMARY KEY (name))");
-
-        //dbg!((*res).is_success());
-        //dbg!((*res).get_error_message());
-        // let _db = Database::new(db_path);
-        // let _db = Database::new_custom(db_path, SystemConfig::default());
     }
 }

@@ -46,7 +46,7 @@ impl DatabaseBuilder {
         self
     }
     pub unsafe fn build(&self) -> Database {
-        // Database::set_logging_level(self.log_level);
+        Database::set_logging_level(self.log_level);
         let mut db = Database::new_with_options(&self.database_path, self.system_config);
         db
     }
@@ -95,34 +95,27 @@ impl Default for SystemConfig {
 }
 
 #[repr(C)]
-pub struct Database(pub Opaque<128>);
+pub struct Database(pub Box<_Database>);
+pub(crate) type _Database = Opaque<128>;
 
 impl Database {
-    pub fn new<S: AsRef<str>>(database_path: S) -> Self {
+    pub fn new(database_path: &str) -> Database {
         let (cstring_path, cstring_path_len) = into_cstr(database_path).unwrap();
-        dbg!(&cstring_path.as_bytes(), cstring_path_len);
+        let mut __this = Box::new_uninit();
 
-        let mut __this = ::std::mem::MaybeUninit::uninit();
         unsafe {
             ffi::kuzu_main_Database_Database(
                 __this.as_mut_ptr(),
                 cstring_path.as_ptr(),
                 cstring_path_len,
             );
-            let k = __this.assume_init();
-            println!("inner {:p}", &k);
-            println!("inner.0.0 {:p}", k.0 .0.as_ptr());
-
-            k
+            Database(__this.assume_init())
         }
     }
 
     fn new_with_options<S: AsRef<str>>(database_path: S, system_config: SystemConfig) -> Self {
         let (cstring_path, cstring_path_len) = into_cstr(database_path).unwrap();
-
-        dbg!(&cstring_path.as_bytes(), cstring_path_len);
-
-        let mut __this = ::std::mem::MaybeUninit::uninit();
+        let mut __this = Box::new_uninit();
 
         unsafe {
             ffi::kuzu_main_Database_Database1(
@@ -131,7 +124,7 @@ impl Database {
                 cstring_path_len,
                 system_config,
             );
-            __this.assume_init()
+            Database(__this.assume_init())
         }
     }
 
@@ -141,9 +134,6 @@ impl Database {
 
     unsafe fn set_logging_level(log_level: LogLevel) {
         let (cstring_log_level, cstring_log_level_len) = into_cstr(log_level.as_str()).unwrap();
-
-        dbg!(&cstring_log_level.as_bytes(), cstring_log_level_len);
-
         ffi::kuzu_main_Database_setLoggingLevel(cstring_log_level.as_ptr(), cstring_log_level_len);
     }
 }
@@ -166,14 +156,14 @@ mod ffi {
     extern "C" {
         #[link_name = "\u{1}_ZN4kuzu4main8DatabaseC1EPKcm"]
         pub fn kuzu_main_Database_Database(
-            this: *mut super::Database,
+            this: *mut super::_Database,
             database_path: *const ::std::os::raw::c_char,
             path_size: usize,
         );
 
         #[link_name = "\u{1}_ZN4kuzu4main8DatabaseC1EPKcmNS0_12SystemConfigE"]
         pub fn kuzu_main_Database_Database1(
-            this: *mut super::Database,
+            this: *mut super::_Database,
             database_path: *const ::std::os::raw::c_char,
             path_size: usize,
             system_config: super::SystemConfig,

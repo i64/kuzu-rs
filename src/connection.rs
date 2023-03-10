@@ -14,7 +14,8 @@ pub(crate) enum ConnectionTransactionMode {
 }
 
 #[repr(C)]
-pub struct QueryResult(Opaque<136>);
+pub struct QueryResult(Box<_QueryResult>);
+pub(crate) type _QueryResult = Opaque<136>;
 
 impl QueryResult {
     pub unsafe fn is_success(&self) -> bool {
@@ -27,22 +28,21 @@ impl QueryResult {
 }
 
 #[repr(C)]
-pub struct Connection(Opaque<72>);
+pub struct Connection(Box<Opaque<72>>);
+pub(crate) type _Connection = Opaque<72>;
 
 impl Connection {
-    pub unsafe fn new(database: *mut database::Database) -> Self {
-        println!("connection {:p}", database);
-        // println!("connection.0.0 {:p}", database.0 .0.as_ptr());
-        let mut _this = ::std::mem::MaybeUninit::uninit();
-        ffi::kuzu_main_Connection_Connection(_this.as_mut_ptr(), database);
-        _this.assume_init()
+    pub fn new(database: &mut database::Database) -> Self {
+        unsafe {
+            let mut _this = Box::new_uninit();
+            ffi::kuzu_main_Connection_Connection(_this.as_mut_ptr(), database.0.as_mut());
+            Self(_this.assume_init())
+        }
     }
 
     pub unsafe fn query<S: AsRef<str>>(&mut self, query: S) -> *mut QueryResult {
         let (cstring_query, cstring_query_len) = into_cstr(query).unwrap();
-        //dbg!(&cstring_query.as_bytes(), cstring_query_len);
-
-        ffi::kuzu_main_Connection_query_c(self, cstring_query.as_ptr(), cstring_query_len)
+        ffi::kuzu_main_Connection_query_c(self.0.as_mut(), cstring_query.as_ptr(), cstring_query_len)
     }
 }
 
@@ -50,13 +50,13 @@ mod ffi {
     extern "C" {
         #[link_name = "\u{1}_ZN4kuzu4main10ConnectionC1EPNS0_8DatabaseE"]
         pub fn kuzu_main_Connection_Connection(
-            this: *mut super::Connection,
-            database: *mut super::database::Database,
+            this: *mut super::_Connection,
+            database: *mut super::database::_Database,
         );
 
         #[link_name = "\u{1}_ZN4kuzu4main10Connection7query_cEPKcm"]
         pub fn kuzu_main_Connection_query_c(
-            this: *mut super::Connection,
+            this: *mut super::_Connection,
             _query: *const ::std::os::raw::c_char,
             query_len: usize,
         ) -> *mut super::QueryResult;
