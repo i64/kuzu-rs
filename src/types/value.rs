@@ -1,3 +1,5 @@
+use crate::helper::PtrContainer;
+
 use super::logical_type::LogicaType;
 
 pub enum TimeUnit {
@@ -17,7 +19,7 @@ impl LogicaType {
         let logical_type = unsafe { ffi::kuzu_value_get_data_type(val) };
         assert!(!logical_type.is_null());
 
-        Self::new(logical_type).unwrap()
+        Self::from(PtrContainer(logical_type))
     }
 }
 
@@ -26,12 +28,16 @@ pub struct KuzuVal {
     pub(crate) logical_type: LogicaType,
 }
 
-impl KuzuVal {
-    pub(crate) fn new(val: *mut ffi::kuzu_value) -> Self {
-        let logical_type = LogicaType::from_kuzu_val(val);
-        KuzuVal { val, logical_type }
+impl From<PtrContainer<ffi::kuzu_value>> for KuzuVal {
+    fn from(value: PtrContainer<ffi::kuzu_value>) -> Self {
+        let logical_type = LogicaType::from_kuzu_val(value.0);
+        KuzuVal {
+            val: value.0,
+            logical_type,
+        }
     }
 }
+
 impl Drop for KuzuVal {
     fn drop(&mut self) {
         unsafe { ffi::kuzu_value_destroy(self.val) }

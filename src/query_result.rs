@@ -2,19 +2,16 @@ use std::{ffi::CStr, marker::PhantomData};
 
 use crate::{
     connection::Connection,
-    helper::into_cstr,
+    helper::PtrContainer,
+    into_cstr,
     types::row::{FromRow, Row},
 };
 
 #[repr(C)]
 pub struct QueryResult(*mut ffi::kuzu_query_result);
 
-impl QueryResult {
-    fn new_unchecked(result: *mut ffi::kuzu_query_result) -> Self {
-        Self(result)
-    }
-
-    pub(crate) fn new(result: *mut ffi::kuzu_query_result) -> Self {
+impl From<PtrContainer<*mut ffi::kuzu_query_result>> for QueryResult {
+    fn from(value: PtrContainer<*mut ffi::kuzu_query_result>) -> Self {
         if result.is_null() {
             // return null
         }
@@ -26,8 +23,10 @@ impl QueryResult {
             }
         }
 
-        Self::new_unchecked(result)
+        Self(result)
     }
+}
+impl QueryResult {
     pub fn iter<'a, R: FromRow<'a>>(&'a self) -> Iter<'a, R> {
         let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0) };
         Iter {
@@ -74,21 +73,12 @@ where
 
 impl Connection {
     pub fn query<S: AsRef<str>>(&self, query: S) -> QueryResult {
-        let (cst, _) = into_cstr(query).unwrap();
-        let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst.as_ptr()) };
-        QueryResult::new(raw_result)
+        let cst = into_cstr!(query.as_ref());
+        let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst) };
+        QueryResult::from(raw_result)
     }
 }
 
-// impl Iterator for QueryResult {
-//     fn next(&mut self) -> Option<Self::Item> {
-//         unsafe {
-//             while ffi::kuzu_query_result_has_next(self.0) {
-//                 let next_item = ffi::kuzu_query_result_get_next(self.0);
-//             }
-//         }
-//     }
-// }
 pub(crate) mod ffi {
     use crate::{connection::ffi::kuzu_connection, types::value::ffi::kuzu_value};
 

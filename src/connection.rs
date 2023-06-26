@@ -1,4 +1,4 @@
-use crate::helper::InnerContainer;
+use crate::helper::PtrContainer;
 use std::cell::RefCell;
 
 use super::database;
@@ -9,7 +9,7 @@ pub(crate) enum ConnectionTransactionMode {
     Manual = 1,
 }
 
-pub struct Connection(RefCell<InnerContainer<*mut ffi::kuzu_connection>>);
+pub struct Connection(RefCell<PtrContainer<ffi::kuzu_connection>>);
 
 impl Connection {
     pub fn new(database: &mut database::Database) -> Option<Self> {
@@ -18,7 +18,7 @@ impl Connection {
             if this.is_null() {
                 None
             } else {
-                Some(Self(RefCell::new(InnerContainer(this))))
+                Some(Self(RefCell::new(PtrContainer(this))))
             }
         }
     }

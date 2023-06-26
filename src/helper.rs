@@ -1,24 +1,18 @@
-use std::ffi::{CString, NulError};
+#[repr(transparent)]
+pub struct PtrContainer<T: ?Sized>(pub *mut T);
 
-pub struct InnerContainer<T>(pub T);
-
-#[repr(u8)]
-pub(crate) enum LoggerEnum {
-    Database = 0,
-    CsvReader = 1,
-    Loader = 2,
-    Processor = 3,
-    BufferManager = 4,
-    Catalog = 5,
-    Storage = 6,
-    TransactionManager = 7,
-    Wal = 8,
+#[macro_export]
+macro_rules! convert_inner_to_owned_string {
+    ($inner:expr) => {{
+        let cstr = unsafe { CStr::from_ptr($inner) };
+        cstr.to_str().unwrap().to_owned()
+    }};
 }
 
-pub(crate) fn into_cstr<S: AsRef<str>>(inp: S) -> Result<(&'static CString, usize), NulError> {
-    let raw_str = inp.as_ref();
-    let cstring = Box::new(CString::new(raw_str)?);
-
-    let len = cstring.as_bytes().len();
-    Ok((Box::leak(cstring), len))
+#[macro_export]
+macro_rules! into_cstr {
+    ($inner:expr) => {{
+        let cstr = ::std::ffi::CString::new($inner).unwrap();
+        Box::leak(Box::new(cstr)).as_ptr()
+    }};
 }

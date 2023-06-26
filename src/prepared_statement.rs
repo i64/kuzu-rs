@@ -1,7 +1,7 @@
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 
 use crate::connection::{self, Connection};
-use crate::helper::into_cstr;
+use crate::into_cstr;
 use crate::query_result::QueryResult;
 use crate::types::value::{KuzuVal, Value};
 
@@ -40,7 +40,7 @@ static STMT_LOOKUP: [&CStr; 256] = static_cstr![
 
 impl<'conn> Statement<'conn> {
     fn new(conn: &'conn Connection, query: &str) -> Option<Self> {
-        let (cstring, _) = into_cstr(query).unwrap();
+        let cstring = CString::new(query).unwrap();
         let stmt = unsafe { ffi::kuzu_connection_prepare(conn.to_inner(), cstring.as_ptr()) };
         if stmt.is_null() {
             return None;
@@ -84,8 +84,7 @@ impl<'conn> Statement<'conn> {
                 STMT_LOOKUP[idx].as_ptr()
             } else {
                 let s_idx = format!("{}", idx + 1);
-                let (cstring, _) = into_cstr(s_idx).unwrap();
-                cstring.as_ptr()
+                into_cstr!(s_idx)
             };
 
             unsafe {
@@ -94,7 +93,7 @@ impl<'conn> Statement<'conn> {
         });
 
         let raw_result = unsafe { ffi::kuzu_connection_execute(self.conn.to_inner(), self.stmt) };
-        QueryResult::new(raw_result)
+        QueryResult::from(raw_result)
     }
 }
 

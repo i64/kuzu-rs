@@ -1,3 +1,5 @@
+use crate::helper::PtrContainer;
+
 #[repr(u32)]
 #[derive(PartialEq, Clone, Copy)]
 pub enum LogicalTypeID {
@@ -72,23 +74,25 @@ impl Clone for LogicaType {
         }
     }
 }
-impl LogicaType {
-    pub(crate) fn new(inner: *mut ffi::kuzu_logical_type) -> Option<Self> {
-        if inner.is_null() {
-            return None;
+
+impl From<PtrContainer<ffi::kuzu_logical_type>> for LogicaType {
+    fn from(value: PtrContainer<ffi::kuzu_logical_type>) -> Self {
+        if value.0.is_null() {
+            unimplemented!()
         }
 
         let tid = {
-            let _tid = unsafe { ffi::kuzu_data_type_get_id(inner) };
+            let _tid = unsafe { ffi::kuzu_data_type_get_id(value.0) };
             LogicalTypeID::try_from(_tid).unwrap()
         };
 
         let fixed_num_elements_in_list =
-            unsafe { ffi::kuzu_data_type_get_fixed_num_elements_in_list(inner) };
+            unsafe { ffi::kuzu_data_type_get_fixed_num_elements_in_list(value.0) };
 
-        Self::new_with_id(tid, inner, fixed_num_elements_in_list)
+        Self::new_with_id(tid, value.0, fixed_num_elements_in_list).unwrap()
     }
-
+}
+impl LogicaType {
     fn new_with_id(
         tid: LogicalTypeID,
         inner: *mut ffi::kuzu_logical_type,

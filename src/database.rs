@@ -1,4 +1,4 @@
-use crate::helper::into_cstr;
+use crate::into_cstr;
 
 #[derive(Clone, Copy)]
 pub enum LogLevel {
@@ -60,30 +60,6 @@ impl DatabaseBuilder {
     //     }
 }
 
-// #[repr(C)]
-// #[derive(Debug, Copy, Clone)]
-// pub struct SystemConfig {
-//     pub default_page_buffer_pool_size: u64,
-//     pub large_page_buffer_pool_size: u64,
-//     pub max_num_threads: u64,
-// }
-
-// impl Default for SystemConfig {
-//     fn default() -> Self {
-//         const DEFAULT_BUFFER_POOL_SIZE: u64 = 1 << 30;
-//         const DEFAULT_PAGES_BUFFER_RATIO: f64 = 0.75;
-//         const LARGE_PAGES_BUFFER_RATIO: f64 = 1.0 - DEFAULT_PAGES_BUFFER_RATIO;
-
-//         SystemConfig {
-//             default_page_buffer_pool_size: ((DEFAULT_BUFFER_POOL_SIZE as f64)
-//                 * DEFAULT_PAGES_BUFFER_RATIO) as u64,
-//             large_page_buffer_pool_size: ((DEFAULT_BUFFER_POOL_SIZE as f64)
-//                 * LARGE_PAGES_BUFFER_RATIO) as u64,
-//             max_num_threads: 1,
-//         }
-//     }
-// }
-
 #[repr(C)]
 pub struct Database(pub *mut ffi::kuzu_database);
 
@@ -92,15 +68,14 @@ impl Database {
         DatabaseBuilder::new(database_path)
     }
     pub fn new<S: AsRef<str>>(database_path: S, buffer_pool_size: u64) -> Database {
-        let (cstring_path, _) = into_cstr(database_path).unwrap();
-
-        let this = unsafe { ffi::kuzu_database_init(cstring_path.as_ptr(), buffer_pool_size) };
+        let cstring_path = into_cstr!(database_path.as_ref());
+        let this = unsafe { ffi::kuzu_database_init(cstring_path, buffer_pool_size) };
         Self(this)
     }
 
     unsafe fn set_logging_level(log_level: LogLevel) {
-        let (cstring_log_level, _) = into_cstr(log_level.as_str()).unwrap();
-        ffi::kuzu_database_set_logging_level(cstring_log_level.as_ptr());
+        let cstring_log_level = into_cstr!(log_level.as_str());
+        ffi::kuzu_database_set_logging_level(cstring_log_level);
     }
 }
 

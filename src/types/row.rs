@@ -1,4 +1,5 @@
 use crate::{
+    helper::PtrContainer,
     query_result::ffi::{kuzu_flat_tuple, kuzu_flat_tuple_get_value},
     types::value::KuzuVal,
 };
@@ -33,7 +34,7 @@ impl Row {
     fn get<D: Decode>(&self, idx: u64) -> Option<D> {
         assert!(self.size >= idx);
         let val = unsafe { kuzu_flat_tuple_get_value(self.flat_tuple, idx) };
-        let decoded = D::decode(&KuzuVal::new(val));
+        let decoded = D::decode(&KuzuVal::from(PtrContainer(val)));
 
         Some(decoded)
     }
