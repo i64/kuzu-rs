@@ -1,8 +1,9 @@
-#![feature(new_uninit)]
-#![allow(dead_code, non_camel_case_types, non_snake_case)]
-mod opaque_types;
-
 pub mod connection;
 pub mod database;
+pub mod query_result;
 
-mod helper;
+pub mod helper;
+pub mod types;
+
+pub mod prepared_statement;
+pub mod transaction;

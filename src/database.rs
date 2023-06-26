@@ -1,13 +1,4 @@
-use std::{
-    ffi::{CStr, CString},
-    io::Seek,
-};
-
-use super::opaque_types;
-use crate::{
-    helper::{self, into_cstr},
-    opaque_types::Opaque,
-};
+use crate::helper::into_cstr;
 
 #[derive(Clone, Copy)]
 pub enum LogLevel {
@@ -28,7 +19,8 @@ impl LogLevel {
 
 pub struct DatabaseBuilder {
     database_path: String,
-    system_config: SystemConfig,
+    buffer_pool_size: u64,
+    //     system_config: SystemConfig,
     log_level: LogLevel,
 }
 
@@ -36,7 +28,8 @@ impl DatabaseBuilder {
     pub fn new<S: AsRef<str>>(database_path: S) -> Self {
         Self {
             database_path: database_path.as_ref().to_owned(),
-            system_config: SystemConfig::default(),
+            buffer_pool_size: 0,
+            // system_config: SystemConfig::default(),
             log_level: LogLevel::Error,
         }
     }
@@ -45,140 +38,93 @@ impl DatabaseBuilder {
         self.log_level = log_level;
         self
     }
-    pub unsafe fn build(&self) -> Database {
-        Database::set_logging_level(self.log_level);
-        let mut db = Database::new_with_options(&self.database_path, self.system_config);
+    pub fn build(&self) -> Database {
+        let db = Database::new(&self.database_path, self.buffer_pool_size);
+        unsafe { Database::set_logging_level(self.log_level) };
         db
     }
-    pub fn with_default_page_buffer_pool_size(
-        &mut self,
-        default_page_buffer_pool_size: u64,
-    ) -> &mut Self {
-        self.system_config.default_page_buffer_pool_size = default_page_buffer_pool_size;
+    pub fn with_page_buffer_pool_size(&mut self, buffer_pool_size: u64) -> &mut Self {
+        self.buffer_pool_size = buffer_pool_size;
         self
     }
-    pub fn with_large_page_buffer_pool_size(
-        &mut self,
-        large_page_buffer_pool_size: u64,
-    ) -> &mut Self {
-        self.system_config.large_page_buffer_pool_size = large_page_buffer_pool_size;
-        self
-    }
-    pub fn with_max_num_threads(&mut self, max_num_threads: u64) -> &mut Self {
-        self.system_config.max_num_threads = max_num_threads;
-        self
-    }
+    //     pub fn with_large_page_buffer_pool_size(
+    //         &mut self,
+    //         large_page_buffer_pool_size: u64,
+    //     ) -> &mut Self {
+    //         self.system_config.large_page_buffer_pool_size = large_page_buffer_pool_size;
+    //         self
+    //     }
+    //     pub fn with_max_num_threads(&mut self, max_num_threads: u64) -> &mut Self {
+    //         self.system_config.max_num_threads = max_num_threads;
+    //         self
+    //     }
 }
+
+// #[repr(C)]
+// #[derive(Debug, Copy, Clone)]
+// pub struct SystemConfig {
+//     pub default_page_buffer_pool_size: u64,
+//     pub large_page_buffer_pool_size: u64,
+//     pub max_num_threads: u64,
+// }
+
+// impl Default for SystemConfig {
+//     fn default() -> Self {
+//         const DEFAULT_BUFFER_POOL_SIZE: u64 = 1 << 30;
+//         const DEFAULT_PAGES_BUFFER_RATIO: f64 = 0.75;
+//         const LARGE_PAGES_BUFFER_RATIO: f64 = 1.0 - DEFAULT_PAGES_BUFFER_RATIO;
+
+//         SystemConfig {
+//             default_page_buffer_pool_size: ((DEFAULT_BUFFER_POOL_SIZE as f64)
+//                 * DEFAULT_PAGES_BUFFER_RATIO) as u64,
+//             large_page_buffer_pool_size: ((DEFAULT_BUFFER_POOL_SIZE as f64)
+//                 * LARGE_PAGES_BUFFER_RATIO) as u64,
+//             max_num_threads: 1,
+//         }
+//     }
+// }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct SystemConfig {
-    pub default_page_buffer_pool_size: u64,
-    pub large_page_buffer_pool_size: u64,
-    pub max_num_threads: u64,
-}
-
-impl Default for SystemConfig {
-    fn default() -> Self {
-        const DEFAULT_BUFFER_POOL_SIZE: u64 = 1 << 30;
-        const DEFAULT_PAGES_BUFFER_RATIO: f64 = 0.75;
-        const LARGE_PAGES_BUFFER_RATIO: f64 = 1.0 - DEFAULT_PAGES_BUFFER_RATIO;
-
-        SystemConfig {
-            default_page_buffer_pool_size: ((DEFAULT_BUFFER_POOL_SIZE as f64)
-                * DEFAULT_PAGES_BUFFER_RATIO) as u64,
-            large_page_buffer_pool_size: ((DEFAULT_BUFFER_POOL_SIZE as f64)
-                * LARGE_PAGES_BUFFER_RATIO) as u64,
-            max_num_threads: 1,
-        }
-    }
-}
-
-#[repr(C)]
-pub struct Database(pub Box<_Database>);
-pub(crate) type _Database = Opaque<128>;
+pub struct Database(pub *mut ffi::kuzu_database);
 
 impl Database {
-    pub fn new(database_path: &str) -> Database {
-        let (cstring_path, cstring_path_len) = into_cstr(database_path).unwrap();
-        let mut __this = Box::new_uninit();
-
-        unsafe {
-            ffi::kuzu_main_Database_Database(
-                __this.as_mut_ptr(),
-                cstring_path.as_ptr(),
-                cstring_path_len,
-            );
-            Database(__this.assume_init())
-        }
+    pub fn builder<S: AsRef<str>>(database_path: S) -> DatabaseBuilder {
+        DatabaseBuilder::new(database_path)
     }
+    pub fn new<S: AsRef<str>>(database_path: S, buffer_pool_size: u64) -> Database {
+        let (cstring_path, _) = into_cstr(database_path).unwrap();
 
-    fn new_with_options<S: AsRef<str>>(database_path: S, system_config: SystemConfig) -> Self {
-        let (cstring_path, cstring_path_len) = into_cstr(database_path).unwrap();
-        let mut __this = Box::new_uninit();
-
-        unsafe {
-            ffi::kuzu_main_Database_Database1(
-                __this.as_mut_ptr(),
-                cstring_path.as_ptr(),
-                cstring_path_len,
-                system_config,
-            );
-            Database(__this.assume_init())
-        }
-    }
-
-    unsafe fn resize_buffer_manager(&mut self, new_size: u64) {
-        ffi::kuzu_main_Database_resizeBufferManager(self, new_size);
+        let this = unsafe { ffi::kuzu_database_init(cstring_path.as_ptr(), buffer_pool_size) };
+        Self(this)
     }
 
     unsafe fn set_logging_level(log_level: LogLevel) {
-        let (cstring_log_level, cstring_log_level_len) = into_cstr(log_level.as_str()).unwrap();
-        ffi::kuzu_main_Database_setLoggingLevel(cstring_log_level.as_ptr(), cstring_log_level_len);
+        let (cstring_log_level, _) = into_cstr(log_level.as_str()).unwrap();
+        ffi::kuzu_database_set_logging_level(cstring_log_level.as_ptr());
     }
 }
 
 impl Drop for Database {
     fn drop(&mut self) {
-        helper::drop_logger(helper::LoggerEnum::Database);
-        helper::drop_logger(helper::LoggerEnum::CsvReader);
-        helper::drop_logger(helper::LoggerEnum::Loader);
-        helper::drop_logger(helper::LoggerEnum::Processor);
-        helper::drop_logger(helper::LoggerEnum::BufferManager);
-        helper::drop_logger(helper::LoggerEnum::Catalog);
-        helper::drop_logger(helper::LoggerEnum::Storage);
-        helper::drop_logger(helper::LoggerEnum::TransactionManager);
-        helper::drop_logger(helper::LoggerEnum::Wal);
+        unsafe { ffi::kuzu_database_destroy(self.0) }
     }
 }
 
-mod ffi {
+pub(crate) mod ffi {
+    #[repr(C)]
+    #[derive(Debug, Copy, Clone)]
+    pub struct kuzu_database {
+        _database: *mut ::std::os::raw::c_void,
+    }
+
     extern "C" {
-        #[link_name = "\u{1}_ZN4kuzu4main8DatabaseC1EPKcm"]
-        pub fn kuzu_main_Database_Database(
-            this: *mut super::_Database,
+        pub fn kuzu_database_init(
             database_path: *const ::std::os::raw::c_char,
-            path_size: usize,
-        );
+            buffer_pool_size: u64,
+        ) -> *mut kuzu_database;
 
-        #[link_name = "\u{1}_ZN4kuzu4main8DatabaseC1EPKcmNS0_12SystemConfigE"]
-        pub fn kuzu_main_Database_Database1(
-            this: *mut super::_Database,
-            database_path: *const ::std::os::raw::c_char,
-            path_size: usize,
-            system_config: super::SystemConfig,
-        );
+        pub fn kuzu_database_set_logging_level(logging_level: *const ::std::os::raw::c_char);
 
-        #[link_name = "\u{1}_ZN4kuzu4main8Database19resizeBufferManagerEm"]
-        pub fn kuzu_main_Database_resizeBufferManager(this: *mut super::Database, new_size: u64);
-
-        #[link_name = "\u{1}_ZN4kuzu4main8DatabaseD1Ev"]
-        pub fn kuzu_main_Database_Database_destructor(this: *mut super::Database);
-
-        #[link_name = "\u{1}_ZN4kuzu4main8Database15setLoggingLevelEPKcm"]
-        pub fn kuzu_main_Database_setLoggingLevel(
-            loggingLevel: *const ::std::os::raw::c_char,
-            loggingLevelSize: usize,
-        );
+        pub fn kuzu_database_destroy(database: *mut kuzu_database);
     }
 }

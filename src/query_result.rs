@@ -1,0 +1,161 @@
+use std::{ffi::CStr, marker::PhantomData};
+
+use crate::{
+    connection::Connection,
+    helper::into_cstr,
+    types::row::{FromRow, Row},
+};
+
+#[repr(C)]
+pub struct QueryResult(*mut ffi::kuzu_query_result);
+
+impl QueryResult {
+    fn new_unchecked(result: *mut ffi::kuzu_query_result) -> Self {
+        Self(result)
+    }
+
+    pub(crate) fn new(result: *mut ffi::kuzu_query_result) -> Self {
+        if result.is_null() {
+            // return null
+        }
+
+        unsafe {
+            if !ffi::kuzu_query_result_is_success(result) {
+                let s = CStr::from_ptr(ffi::kuzu_query_result_get_error_message(result)).to_str();
+                panic!("{}", s.unwrap())
+            }
+        }
+
+        Self::new_unchecked(result)
+    }
+    pub fn iter<'a, R: FromRow<'a>>(&'a self) -> Iter<'a, R> {
+        let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0) };
+        Iter {
+            _m: PhantomData,
+            inner: self,
+            column_len,
+        }
+    }
+}
+
+impl Drop for QueryResult {
+    fn drop(&mut self) {
+        unsafe { ffi::kuzu_query_result_destroy(self.0) }
+    }
+}
+
+pub struct Iter<'qr, R: FromRow<'qr>> {
+    inner: &'qr QueryResult,
+    column_len: u64,
+    // size: usize,
+    _m: PhantomData<R>,
+}
+
+impl<R> Iterator for Iter<'_, R>
+where
+    R: for<'a> FromRow<'a>,
+{
+    type Item = R;
+    fn next(&mut self) -> Option<Self::Item> {
+        unsafe {
+            if ffi::kuzu_query_result_has_next(self.inner.0) {
+                let _row = ffi::kuzu_query_result_get_next(self.inner.0);
+                assert!(!_row.is_null());
+                let row = Row::new(_row, self.column_len);
+                return Self::Item::from_row(&row);
+            }
+        }
+        None
+    }
+    // fn size_hint(&self) -> (usize, Option<usize>) {
+    //     self.size
+    // }
+}
+
+impl Connection {
+    pub fn query<S: AsRef<str>>(&self, query: S) -> QueryResult {
+        let (cst, _) = into_cstr(query).unwrap();
+        let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst.as_ptr()) };
+        QueryResult::new(raw_result)
+    }
+}
+
+// impl Iterator for QueryResult {
+//     fn next(&mut self) -> Option<Self::Item> {
+//         unsafe {
+//             while ffi::kuzu_query_result_has_next(self.0) {
+//                 let next_item = ffi::kuzu_query_result_get_next(self.0);
+//             }
+//         }
+//     }
+// }
+pub(crate) mod ffi {
+    use crate::{connection::ffi::kuzu_connection, types::value::ffi::kuzu_value};
+
+    #[repr(C)]
+    pub struct kuzu_query_result {
+        _query_result: *mut ::std::os::raw::c_void,
+    }
+
+    #[repr(C)]
+    pub struct kuzu_flat_tuple {
+        _flat_tuple: *mut ::std::os::raw::c_void,
+    }
+
+    extern "C" {
+        pub fn kuzu_connection_query(
+            connection: *mut kuzu_connection,
+            query: *const ::std::os::raw::c_char,
+        ) -> *mut kuzu_query_result;
+
+        pub fn kuzu_query_result_destroy(query_result: *mut kuzu_query_result);
+
+        pub fn kuzu_query_result_is_success(query_result: *mut kuzu_query_result) -> bool;
+
+        pub fn kuzu_query_result_get_error_message(
+            query_result: *mut kuzu_query_result,
+        ) -> *mut ::std::os::raw::c_char;
+
+        pub fn kuzu_query_result_get_num_columns(query_result: *mut kuzu_query_result) -> u64;
+
+        // pub fn kuzu_query_result_get_column_name(
+        //     query_result: *mut kuzu_query_result,
+        //     index: u64,
+        // ) -> *mut ::std::os::raw::c_char;
+
+        // pub fn kuzu_query_result_get_column_data_type(
+        //     query_result: *mut kuzu_query_result,
+        //     index: u64,
+        // ) -> *mut kuzu_logical_type;
+
+        // pub fn kuzu_query_result_get_num_tuples(query_result: *mut kuzu_query_result) -> u64;
+
+        // pub fn kuzu_query_result_get_query_summary(
+        //     query_result: *mut kuzu_query_result,
+        // ) -> *mut kuzu_query_summary;
+
+        pub fn kuzu_query_result_has_next(query_result: *mut kuzu_query_result) -> bool;
+
+        pub fn kuzu_query_result_get_next(
+            query_result: *mut kuzu_query_result,
+        ) -> *mut kuzu_flat_tuple;
+
+        pub fn kuzu_flat_tuple_get_value(
+            flat_tuple: *mut kuzu_flat_tuple,
+            index: u64,
+        ) -> *mut kuzu_value;
+        // pub fn kuzu_query_result_to_string(
+        //     query_result: *mut kuzu_query_result,
+        // ) -> *mut ::std::os::raw::c_char;
+
+        // pub fn kuzu_query_result_write_to_csv(
+        //     query_result: *mut kuzu_query_result,
+        //     file_path: *const ::std::os::raw::c_char,
+        //     delimiter: ::std::os::raw::c_char,
+        //     escape_char: ::std::os::raw::c_char,
+        //     new_line: ::std::os::raw::c_char,
+        // );
+
+        // pub fn kuzu_query_result_reset_iterator(query_result: *mut kuzu_query_result);
+    }
+}
