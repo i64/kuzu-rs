@@ -1,9 +1,10 @@
 use std::ffi::{CStr, CString};
 
 use crate::connection::{self, Connection};
+use crate::helper::PtrContainer;
 use crate::into_cstr;
 use crate::query_result::QueryResult;
-use crate::types::value::{KuzuVal, Value};
+use crate::types::value::KuzuVal;
 
 struct Argument(KuzuVal);
 pub struct Statement<'conn> {
@@ -72,8 +73,8 @@ impl<'conn> Statement<'conn> {
         })
     }
 
-    pub fn bind<V: Value>(&mut self, v: V) -> &mut Self {
-        let val = v.to_kuzu();
+    pub fn bind<V: Into<KuzuVal>>(&mut self, v: V) -> &mut Self {
+        let val = v.into();
         self.args.push(Argument(val));
         self
     }
@@ -93,7 +94,7 @@ impl<'conn> Statement<'conn> {
         });
 
         let raw_result = unsafe { ffi::kuzu_connection_execute(self.conn.to_inner(), self.stmt) };
-        QueryResult::from(raw_result)
+        PtrContainer(raw_result).into()
     }
 }
 

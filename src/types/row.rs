@@ -4,23 +4,7 @@ use crate::{
     types::value::KuzuVal,
 };
 
-use super::decode::Decode;
-
-const fn _min(elems: &[usize]) -> usize {
-    let len = elems.len();
-    let mut idx = 0;
-    let mut min = elems[0];
-
-    while len > idx {
-        let current = elems[idx];
-        if min > current {
-            min = current;
-        }
-        idx += 1;
-    }
-    min
-}
-
+#[derive(Clone)]
 pub struct Row {
     flat_tuple: *mut kuzu_flat_tuple,
     size: u64,
@@ -31,12 +15,10 @@ impl Row {
         Self { flat_tuple, size }
     }
 
-    fn get<D: Decode>(&self, idx: u64) -> Option<D> {
+    pub fn get(&self, idx: u64) -> Option<KuzuVal> {
         assert!(self.size >= idx);
         let val = unsafe { kuzu_flat_tuple_get_value(self.flat_tuple, idx) };
-        let decoded = D::decode(&KuzuVal::from(PtrContainer(val)));
-
-        Some(decoded)
+        Some(KuzuVal::from(PtrContainer(val)))
     }
 }
 
@@ -48,17 +30,22 @@ macro_rules! impl_from_row_for_tuple {
     ($( ($idx:tt) -> $T:ident );+;) => {
         impl<'r, $($T,)+> FromRow<'r> for ($($T,)+)
         where
-            $($T: Decode,)+
+            $($T: From<KuzuVal>,)+
 
         {
             #[inline]
             fn from_row(row: &'r Row) -> Option<Self> {
-                Some(($(row.get($idx as u64)?,)+))
-            }
+                Some(($($T::from(row.get($idx as u64)?),)+))
+             }
         }
     };
 }
 
+impl FromRow<'_> for Row {
+    fn from_row(row: &Row) -> Option<Self> {
+        Some(row.clone())
+    }
+}
 impl_from_row_for_tuple!(
     (0) -> T1;
 );

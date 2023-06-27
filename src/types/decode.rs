@@ -1,77 +1,70 @@
 use super::{logical_type::LogicalTypeID, value::KuzuVal};
 
-pub trait Decode
-where
-    Self: Sized,
-{
-    fn decode(kuzu_val: &KuzuVal) -> Self;
-    fn check_type(kuzu_val: &KuzuVal) -> bool;
+
+impl From<KuzuVal> for bool {
+    fn from(value: KuzuVal) -> Self {
+        // assert!(Self::check_type(kuzu_val));
+        unsafe { ffi::kuzu_value_get_bool(value.val) }
+    }
+
+    // fn check_type(kuzu_val: &KuzuVal) -> bool {
+    //     kuzu_val.logical_type.tid == LogicalTypeID::Bool
+    // }
 }
 
-impl Decode for bool {
-    fn decode(kuzu_val: &KuzuVal) -> Self {
-        assert!(Self::check_type(kuzu_val));
-        unsafe { ffi::kuzu_value_get_bool(kuzu_val.val) }
+impl From<KuzuVal> for i16 {
+    fn from(value: KuzuVal) -> Self {
+        // assert!(Self::check_type(kuzu_val));
+        unsafe { ffi::kuzu_value_get_int16(value.val) }
     }
 
-    fn check_type(kuzu_val: &KuzuVal) -> bool {
-        kuzu_val.logical_type.tid == LogicalTypeID::Bool
-    }
+    // fn check_type(kuzu_val: &KuzuVal) -> bool {
+    //     kuzu_val.logical_type.tid == LogicalTypeID::Int16
+    // }
 }
 
-impl Decode for i16 {
-    fn decode(kuzu_val: &KuzuVal) -> Self {
-        assert!(Self::check_type(kuzu_val));
-        unsafe { ffi::kuzu_value_get_int16(kuzu_val.val) }
+impl From<KuzuVal> for i32 {
+    fn from(value: KuzuVal) -> Self {
+        // assert!(Self::check_type(kuzu_val));
+        unsafe { ffi::kuzu_value_get_int32(value.val) }
     }
 
-    fn check_type(kuzu_val: &KuzuVal) -> bool {
-        kuzu_val.logical_type.tid == LogicalTypeID::Int16
-    }
+    // fn check_type(kuzu_val: &KuzuVal) -> bool {
+    //     kuzu_val.logical_type.tid == LogicalTypeID::Int32
+    // }
 }
 
-impl Decode for i32 {
-    fn decode(kuzu_val: &KuzuVal) -> Self {
-        assert!(Self::check_type(kuzu_val));
-        unsafe { ffi::kuzu_value_get_int32(kuzu_val.val) }
+impl From<KuzuVal> for i64 {
+    fn from(value: KuzuVal) -> Self {
+        // assert!(Self::check_type(kuzu_val));
+        unsafe { ffi::kuzu_value_get_int64(value.val) }
     }
 
-    fn check_type(kuzu_val: &KuzuVal) -> bool {
-        kuzu_val.logical_type.tid == LogicalTypeID::Int32
-    }
+    // fn check_type(kuzu_val: &KuzuVal) -> bool {
+    //     kuzu_val.logical_type.tid == LogicalTypeID::Int64
+    // }
 }
 
-impl Decode for i64 {
-    fn decode(kuzu_val: &KuzuVal) -> Self {
-        assert!(Self::check_type(kuzu_val));
-        unsafe { ffi::kuzu_value_get_int64(kuzu_val.val) }
+impl From<KuzuVal> for f32 {
+    fn from(value: KuzuVal) -> Self {
+        // assert!(Self::check_type(kuzu_val));
+        unsafe { ffi::kuzu_value_get_float(value.val) }
     }
 
-    fn check_type(kuzu_val: &KuzuVal) -> bool {
-        kuzu_val.logical_type.tid == LogicalTypeID::Int64
-    }
+    // fn check_type(kuzu_val: &KuzuVal) -> bool {
+    //     kuzu_val.logical_type.tid == LogicalTypeID::Float
+    // }
 }
 
-impl Decode for f32 {
-    fn decode(kuzu_val: &KuzuVal) -> Self {
-        assert!(Self::check_type(kuzu_val));
-        unsafe { ffi::kuzu_value_get_float(kuzu_val.val) }
+impl From<KuzuVal> for f64 {
+    fn from(value: KuzuVal) -> Self {
+        // assert!(Self::check_type(kuzu_val));
+        unsafe { ffi::kuzu_value_get_double(value.val) }
     }
 
-    fn check_type(kuzu_val: &KuzuVal) -> bool {
-        kuzu_val.logical_type.tid == LogicalTypeID::Float
-    }
-}
-
-impl Decode for f64 {
-    fn decode(kuzu_val: &KuzuVal) -> Self {
-        assert!(Self::check_type(kuzu_val));
-        unsafe { ffi::kuzu_value_get_double(kuzu_val.val) }
-    }
-
-    fn check_type(kuzu_val: &KuzuVal) -> bool {
-        kuzu_val.logical_type.tid == LogicalTypeID::Double
-    }
+    // fn check_type(kuzu_val: &KuzuVal) -> bool {
+    //     kuzu_val.logical_type.tid == LogicalTypeID::Double
+    // }
 }
 
 mod ffi {

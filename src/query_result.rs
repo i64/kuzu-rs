@@ -7,32 +7,34 @@ use crate::{
     types::row::{FromRow, Row},
 };
 
-#[repr(C)]
 pub struct QueryResult(*mut ffi::kuzu_query_result);
 
-impl From<PtrContainer<*mut ffi::kuzu_query_result>> for QueryResult {
-    fn from(value: PtrContainer<*mut ffi::kuzu_query_result>) -> Self {
-        if result.is_null() {
+impl From<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
+    fn from(value: PtrContainer<ffi::kuzu_query_result>) -> Self {
+        if value.0.is_null() {
             // return null
         }
 
         unsafe {
-            if !ffi::kuzu_query_result_is_success(result) {
-                let s = CStr::from_ptr(ffi::kuzu_query_result_get_error_message(result)).to_str();
+            if !ffi::kuzu_query_result_is_success(value.0) {
+                let s = CStr::from_ptr(ffi::kuzu_query_result_get_error_message(value.0)).to_str();
                 panic!("{}", s.unwrap())
             }
         }
 
-        Self(result)
+        Self(value.0)
     }
 }
+
 impl QueryResult {
     pub fn iter<'a, R: FromRow<'a>>(&'a self) -> Iter<'a, R> {
         let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0) };
+        let len = unsafe { ffi::kuzu_query_result_get_num_tuples(self.0) } as usize;
         Iter {
             _m: PhantomData,
             inner: self,
             column_len,
+            len,
         }
     }
 }
@@ -46,7 +48,7 @@ impl Drop for QueryResult {
 pub struct Iter<'qr, R: FromRow<'qr>> {
     inner: &'qr QueryResult,
     column_len: u64,
-    // size: usize,
+    len: usize,
     _m: PhantomData<R>,
 }
 
@@ -61,21 +63,22 @@ where
                 let _row = ffi::kuzu_query_result_get_next(self.inner.0);
                 assert!(!_row.is_null());
                 let row = Row::new(_row, self.column_len);
+                self.len -= 1;
                 return Self::Item::from_row(&row);
             }
         }
         None
     }
-    // fn size_hint(&self) -> (usize, Option<usize>) {
-    //     self.size
-    // }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
 }
 
 impl Connection {
     pub fn query<S: AsRef<str>>(&self, query: S) -> QueryResult {
         let cst = into_cstr!(query.as_ref());
         let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst) };
-        QueryResult::from(raw_result)
+        PtrContainer(raw_result).into()
     }
 }
 
@@ -108,17 +111,12 @@ pub(crate) mod ffi {
 
         pub fn kuzu_query_result_get_num_columns(query_result: *mut kuzu_query_result) -> u64;
 
-        // pub fn kuzu_query_result_get_column_name(
-        //     query_result: *mut kuzu_query_result,
-        //     index: u64,
-        // ) -> *mut ::std::os::raw::c_char;
-
         // pub fn kuzu_query_result_get_column_data_type(
         //     query_result: *mut kuzu_query_result,
         //     index: u64,
         // ) -> *mut kuzu_logical_type;
 
-        // pub fn kuzu_query_result_get_num_tuples(query_result: *mut kuzu_query_result) -> u64;
+        pub fn kuzu_query_result_get_num_tuples(query_result: *mut kuzu_query_result) -> u64;
 
         // pub fn kuzu_query_result_get_query_summary(
         //     query_result: *mut kuzu_query_result,
@@ -134,6 +132,7 @@ pub(crate) mod ffi {
             flat_tuple: *mut kuzu_flat_tuple,
             index: u64,
         ) -> *mut kuzu_value;
+
         // pub fn kuzu_query_result_to_string(
         //     query_result: *mut kuzu_query_result,
         // ) -> *mut ::std::os::raw::c_char;

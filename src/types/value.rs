@@ -19,7 +19,7 @@ impl LogicaType {
         let logical_type = unsafe { ffi::kuzu_value_get_data_type(val) };
         assert!(!logical_type.is_null());
 
-        Self::from(PtrContainer(logical_type))
+        PtrContainer(logical_type).into()
     }
 }
 
@@ -43,58 +43,55 @@ impl Drop for KuzuVal {
         unsafe { ffi::kuzu_value_destroy(self.val) }
     }
 }
-pub trait Value {
-    fn to_kuzu(&self) -> KuzuVal;
-}
 
-impl Value for bool {
-    fn to_kuzu(&self) -> KuzuVal {
-        let val = unsafe { ffi::kuzu_value_create_bool(*self) };
+impl From<bool> for KuzuVal {
+    fn from(value: bool) -> Self {
+        let val = unsafe { ffi::kuzu_value_create_bool(value) };
         let logical_type = LogicaType::from_kuzu_val(val);
 
         KuzuVal { val, logical_type }
     }
 }
 
-impl Value for i16 {
-    fn to_kuzu(&self) -> KuzuVal {
-        let val = unsafe { ffi::kuzu_value_create_int16(*self) };
+impl From<i16> for KuzuVal {
+    fn from(value: i16) -> Self {
+        let val = unsafe { ffi::kuzu_value_create_int16(value) };
         let logical_type = LogicaType::from_kuzu_val(val);
 
         KuzuVal { val, logical_type }
     }
 }
 
-impl Value for i32 {
-    fn to_kuzu(&self) -> KuzuVal {
-        let val = unsafe { ffi::kuzu_value_create_int32(*self) };
+impl From<i32> for KuzuVal {
+    fn from(value: i32) -> Self {
+        let val = unsafe { ffi::kuzu_value_create_int32(value) };
         let logical_type = LogicaType::from_kuzu_val(val);
 
         KuzuVal { val, logical_type }
     }
 }
 
-impl Value for i64 {
-    fn to_kuzu(&self) -> KuzuVal {
-        let val = unsafe { ffi::kuzu_value_create_int64(*self) };
+impl From<i64> for KuzuVal {
+    fn from(value: i64) -> Self {
+        let val = unsafe { ffi::kuzu_value_create_int64(value) };
         let logical_type = LogicaType::from_kuzu_val(val);
 
         KuzuVal { val, logical_type }
     }
 }
 
-impl Value for f32 {
-    fn to_kuzu(&self) -> KuzuVal {
-        let val = unsafe { ffi::kuzu_value_create_float(*self) };
+impl From<f32> for KuzuVal {
+    fn from(value: f32) -> Self {
+        let val = unsafe { ffi::kuzu_value_create_float(value) };
         let logical_type = LogicaType::from_kuzu_val(val);
 
         KuzuVal { val, logical_type }
     }
 }
 
-impl Value for f64 {
-    fn to_kuzu(&self) -> KuzuVal {
-        let val = unsafe { ffi::kuzu_value_create_double(*self) };
+impl From<f64> for KuzuVal {
+    fn from(value: f64) -> Self {
+        let val = unsafe { ffi::kuzu_value_create_double(value) };
         let logical_type = LogicaType::from_kuzu_val(val);
 
         KuzuVal { val, logical_type }
