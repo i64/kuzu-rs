@@ -1,7 +1,4 @@
-use super::{
-    custom_types::{node::Node, rel::Relation},
-    value::KuzuValue,
-};
+use super::value::{KuzuValue, Node, Relation};
 
 impl From<KuzuValue> for bool {
     fn from(value: KuzuValue) -> Self {
