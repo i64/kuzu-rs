@@ -1,5 +1,8 @@
 use kuzu_rs::connection::Connection;
 use kuzu_rs::database::Database;
+use kuzu_rs::types::custom_types::rel::Relation;
+use kuzu_rs::types::row::Row;
+use kuzu_rs::types::custom_types::node::{InternalId, Node};
 
 fn main() {
     unsafe {
@@ -10,19 +13,29 @@ fn main() {
 
         let mut connection = Connection::new(&mut db).unwrap();
 
-        let _ =
-            connection.query("CREATE NODE TABLE Person(name STRING, age INT64, isStudent BOOLEAN, PRIMARY KEY(name));");
+        connection.query("CREATE NODE TABLE User(name STRING, age INT64, PRIMARY KEY (name));");
+        connection.query("CREATE NODE TABLE City(name STRING, population INT64, PRIMARY KEY (name));");
 
-        let _ = connection.query("CREATE (a:Person {name: 'elma', age: 12, isStudent: false});");
+        connection.query("CREATE REL TABLE Follows(FROM User TO User, since INT64);");
+        connection.query("CREATE REL TABLE LivesIn(FROM User TO City);");
+
+        connection.query("COPY User FROM \"../test_data/user.csv\";");
+        connection.query("COPY City FROM \"../test_data/city.csv\";");
+        connection.query("COPY Follows FROM \"../test_data/follows.csv\";");
+        connection.query("COPY LivesIn FROM \"../test_data/lives_in.csv\";");
 
         let res = connection
-            .prepare("MATCH (a:Person) WHERE a.isStudent = $1 RETURN a.age")
-            .bind(false)
-            .execute();
+            .query("MATCH (a:User)<-[e:Follows]-(b:User) RETURN a, e, b");
 
-        for r in res.iter() {
-            let age: (i64,) = r;
-            dbg!(age);
+        for r in res.iter::<Row>() {
+            let a: Node = r.get(0).unwrap().into();
+            dbg!(&a);
+            let e: Relation = r.get(1).unwrap().into();
+            dbg!(&e);
+            let b: Node = r.get(2).unwrap().into();
+            dbg!(&b);
+
+            
         }
     }
 }

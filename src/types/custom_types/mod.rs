@@ -1,2 +1,2 @@
 pub mod node;
-mod rel;
+pub mod rel;

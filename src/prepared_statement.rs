@@ -89,7 +89,7 @@ impl<'conn> Statement<'conn> {
             };
 
             unsafe {
-                ffi::kuzu_prepared_statement_bind_value(self.stmt, param_name, arg.0.val);
+                ffi::kuzu_prepared_statement_bind_value(self.stmt, param_name, arg.0.val.0);
             }
         });
 

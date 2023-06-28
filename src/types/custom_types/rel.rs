@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{convert_inner_to_owned_string, helper::PtrContainer, types::value::KuzuVal};
+use crate::{convert_inner_to_owned_string, helper::PtrContainer, types::value::{KuzuVal, ffi::kuzu_value}};
 
 use super::node::InternalId;
 
-struct Relation {
+#[derive(Debug)]
+pub struct Relation {
     label: String,
     src: InternalId,
     dst: InternalId,
@@ -30,7 +31,7 @@ impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
                     };
                     let val = unsafe { ffi::kuzu_rel_val_get_property_value_at(value.0, idx) };
 
-                    (key, PtrContainer(val).into())
+                    (key, KuzuVal::from(PtrContainer(val)))
                 })
                 .collect()
         };
@@ -44,7 +45,9 @@ impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
     }
 }
 
-mod ffi {
+
+
+pub (crate) mod ffi {
     use crate::types::{custom_types::node::ffi::kuzu_internal_id_t, value::ffi::kuzu_value};
 
     #[repr(C)]
@@ -68,6 +71,6 @@ mod ffi {
             rel_val: *mut kuzu_rel_val,
             index: u64,
         ) -> *mut kuzu_value;
-
     }
+
 }

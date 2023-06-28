@@ -4,7 +4,8 @@ use std::{collections::HashMap};
 use crate::convert_inner_to_owned_string;
 use crate::types::value::KuzuVal;
 
-pub(crate) struct InternalId {
+#[derive(Debug)]
+pub struct InternalId {
     offset: u64,
     table_id: u64,
 }
@@ -18,7 +19,8 @@ impl From<ffi::kuzu_internal_id_t> for InternalId {
     }
 }
 
-struct Node {
+#[derive(Debug)]
+pub struct Node {
     id: InternalId,
     label: String,
     properties: HashMap<String, KuzuVal>,
@@ -44,7 +46,7 @@ impl From<PtrContainer<ffi::kuzu_node_val>> for Node {
                     };
                     let val = unsafe { ffi::kuzu_node_val_get_property_value_at(value.0, idx) };
 
-                    (key, PtrContainer(val).into())
+                    (key, (PtrContainer(val)).into())
                 })
                 .collect()
         };

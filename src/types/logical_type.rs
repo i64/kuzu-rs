@@ -1,6 +1,7 @@
 use crate::helper::PtrContainer;
 
 #[repr(u32)]
+#[derive(Debug)]
 #[derive(PartialEq, Clone, Copy)]
 pub enum LogicalTypeID {
     Any = 0,
@@ -49,6 +50,7 @@ impl TryFrom<u32> for LogicalTypeID {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct LogicaType {
     pub(crate) tid: LogicalTypeID,
     inner_ptr: *mut ffi::kuzu_logical_type,
@@ -119,6 +121,7 @@ impl LogicaType {
 
 pub(crate) mod ffi {
     #[repr(C)]
+    #[derive(Debug)]
     pub struct kuzu_logical_type {
         _data_type: *mut ::std::os::raw::c_void,
     }

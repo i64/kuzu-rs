@@ -1,4 +1,6 @@
 #[repr(transparent)]
+#[derive(Debug)]
+#[derive(Clone, Copy)]
 pub struct PtrContainer<T: ?Sized>(pub *mut T);
 
 #[macro_export]
