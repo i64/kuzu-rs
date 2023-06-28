@@ -54,8 +54,8 @@ impl TryFrom<u32> for LogicalTypeID {
 #[derive(Debug)]
 pub(crate) struct LogicaType {
     pub(crate) tid: LogicalTypeID,
-    inner_ptr: *mut ffi::kuzu_logical_type,
-    fixed_num_elements_in_list: u64,
+    pub(crate) inner_ptr: *mut ffi::kuzu_logical_type,
+    pub(crate) fixed_num_elements_in_list: u64,
 }
 
 impl PartialEq for LogicaType {
