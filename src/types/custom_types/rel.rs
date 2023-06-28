@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 
-use crate::{convert_inner_to_owned_string, helper::PtrContainer, types::value::{KuzuVal, ffi::kuzu_value}};
+use crate::{convert_inner_to_owned_string, helper::PtrContainer, types::value::KuzuValue};
 
 use super::node::InternalId;
+
+use crate::ffi;
 
 #[derive(Debug)]
 pub struct Relation {
     label: String,
     src: InternalId,
     dst: InternalId,
-    properties: HashMap<String, KuzuVal>,
+    properties: HashMap<String, KuzuValue>,
 }
 
 impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
@@ -31,7 +33,7 @@ impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
                     };
                     let val = unsafe { ffi::kuzu_rel_val_get_property_value_at(value.0, idx) };
 
-                    (key, KuzuVal::from(PtrContainer(val)))
+                    (key, KuzuValue::from(PtrContainer(val)))
                 })
                 .collect()
         };
@@ -43,34 +45,4 @@ impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
             properties,
         }
     }
-}
-
-
-
-pub (crate) mod ffi {
-    use crate::types::{custom_types::node::ffi::kuzu_internal_id_t, value::ffi::kuzu_value};
-
-    #[repr(C)]
-    pub struct kuzu_rel_val {
-        _rel_val: *mut ::std::os::raw::c_void,
-        _is_owned_by_cpp: bool,
-    }
-
-    extern "C" {
-        pub fn kuzu_rel_val_get_src_id(rel_val: *mut kuzu_rel_val) -> kuzu_internal_id_t;
-        pub fn kuzu_rel_val_get_dst_id(rel_val: *mut kuzu_rel_val) -> kuzu_internal_id_t;
-        pub fn kuzu_rel_val_get_label_name(
-            rel_val: *mut kuzu_rel_val,
-        ) -> *const ::std::os::raw::c_char;
-        pub fn kuzu_rel_val_get_property_size(rel_val: *mut kuzu_rel_val) -> u64;
-        pub fn kuzu_rel_val_get_property_name_at(
-            rel_val: *mut kuzu_rel_val,
-            index: u64,
-        ) -> *mut ::std::os::raw::c_char;
-        pub fn kuzu_rel_val_get_property_value_at(
-            rel_val: *mut kuzu_rel_val,
-            index: u64,
-        ) -> *mut kuzu_value;
-    }
-
 }

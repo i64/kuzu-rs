@@ -1,8 +1,9 @@
 use crate::helper::PtrContainer;
 
+use crate::ffi;
+
 #[repr(u32)]
-#[derive(Debug)]
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum LogicalTypeID {
     Any = 0,
     Node = 10,
@@ -77,23 +78,6 @@ impl Clone for LogicaType {
     }
 }
 
-impl From<PtrContainer<ffi::kuzu_logical_type>> for LogicaType {
-    fn from(value: PtrContainer<ffi::kuzu_logical_type>) -> Self {
-        if value.0.is_null() {
-            unimplemented!()
-        }
-
-        let tid = {
-            let _tid = unsafe { ffi::kuzu_data_type_get_id(value.0) };
-            LogicalTypeID::try_from(_tid).unwrap()
-        };
-
-        let fixed_num_elements_in_list =
-            unsafe { ffi::kuzu_data_type_get_fixed_num_elements_in_list(value.0) };
-
-        Self::new_with_id(tid, value.0, fixed_num_elements_in_list).unwrap()
-    }
-}
 impl LogicaType {
     fn new_with_id(
         tid: LogicalTypeID,
@@ -119,29 +103,30 @@ impl LogicaType {
     }
 }
 
-pub(crate) mod ffi {
-    #[repr(C)]
-    #[derive(Debug)]
-    pub struct kuzu_logical_type {
-        _data_type: *mut ::std::os::raw::c_void,
+impl From<&PtrContainer<ffi::kuzu_value>> for LogicaType {
+    fn from(value: &PtrContainer<ffi::kuzu_value>) -> Self {
+        assert!(!value.0.is_null());
+        let logical_type = unsafe { ffi::kuzu_value_get_data_type(value.0) };
+        assert!(!logical_type.is_null());
+
+        PtrContainer(logical_type).into()
     }
+}
 
-    extern "C" {
-        pub fn kuzu_data_type_create(
-            id: u32,
-            child_type: *mut kuzu_logical_type,
-            fixed_num_elements_in_list: u64,
-        ) -> *mut kuzu_logical_type;
+impl From<PtrContainer<ffi::kuzu_logical_type>> for LogicaType {
+    fn from(value: PtrContainer<ffi::kuzu_logical_type>) -> Self {
+        if value.0.is_null() {
+            unimplemented!()
+        }
 
-        pub fn kuzu_data_type_clone(data_type: *mut kuzu_logical_type) -> *mut kuzu_logical_type;
-        pub fn kuzu_data_type_destroy(data_type: *mut kuzu_logical_type);
-        pub fn kuzu_data_type_equals(
-            data_type1: *mut kuzu_logical_type,
-            data_type2: *mut kuzu_logical_type,
-        ) -> bool;
-        pub fn kuzu_data_type_get_id(data_type: *mut kuzu_logical_type) -> u32;
-        pub fn kuzu_data_type_get_fixed_num_elements_in_list(
-            data_type: *mut kuzu_logical_type,
-        ) -> u64;
+        let tid = {
+            let _tid = unsafe { ffi::kuzu_data_type_get_id(value.0) };
+            LogicalTypeID::try_from(_tid).unwrap()
+        };
+
+        let fixed_num_elements_in_list =
+            unsafe { ffi::kuzu_data_type_get_fixed_num_elements_in_list(value.0) };
+
+        Self::new_with_id(tid, value.0, fixed_num_elements_in_list).unwrap()
     }
 }

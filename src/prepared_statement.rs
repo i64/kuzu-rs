@@ -1,12 +1,12 @@
-use std::ffi::{CStr, CString};
-
 use crate::connection::{self, Connection};
+use crate::ffi;
 use crate::helper::PtrContainer;
 use crate::into_cstr;
 use crate::query_result::QueryResult;
-use crate::types::value::KuzuVal;
+use crate::types::value::KuzuValue;
+use std::ffi::{CStr, CString};
 
-struct Argument(KuzuVal);
+struct Argument(KuzuValue);
 pub struct Statement<'conn> {
     conn: &'conn connection::Connection,
     stmt: *mut ffi::kuzu_prepared_statement,
@@ -73,7 +73,7 @@ impl<'conn> Statement<'conn> {
         })
     }
 
-    pub fn bind<V: Into<KuzuVal>>(&mut self, v: V) -> &mut Self {
+    pub fn bind<V: Into<KuzuValue>>(&mut self, v: V) -> &mut Self {
         let val = v.into();
         self.args.push(Argument(val));
         self
@@ -81,6 +81,7 @@ impl<'conn> Statement<'conn> {
 
     pub fn execute(&self) -> QueryResult {
         self.args.iter().enumerate().for_each(|(idx, arg)| {
+            let val = PtrContainer::from(&arg.0);
             let param_name = if STMT_LOOKUP.len() > idx {
                 STMT_LOOKUP[idx].as_ptr()
             } else {
@@ -89,7 +90,7 @@ impl<'conn> Statement<'conn> {
             };
 
             unsafe {
-                ffi::kuzu_prepared_statement_bind_value(self.stmt, param_name, arg.0.val.0);
+                ffi::kuzu_prepared_statement_bind_value(self.stmt, param_name, val.0);
             }
         });
 
@@ -102,45 +103,5 @@ impl Connection {
     pub fn prepare<S: AsRef<str>>(&mut self, query: S) -> Statement {
         let query = query.as_ref();
         Statement::new(self, query).unwrap()
-    }
-}
-
-pub(crate) mod ffi {
-    use crate::{connection, query_result, types::value::ffi::kuzu_value};
-
-    #[repr(C)]
-    pub struct kuzu_prepared_statement {
-        _prepared_statement: *mut ::std::os::raw::c_void,
-        _bound_values: *mut ::std::os::raw::c_void,
-    }
-
-    extern "C" {
-        pub fn kuzu_connection_prepare(
-            connection: *mut super::connection::ffi::kuzu_connection,
-            query: *const ::std::os::raw::c_char,
-        ) -> *mut kuzu_prepared_statement;
-
-        pub fn kuzu_prepared_statement_destroy(prepared_statement: *mut kuzu_prepared_statement);
-        pub fn kuzu_prepared_statement_allow_active_transaction(
-            prepared_statement: *mut kuzu_prepared_statement,
-        ) -> bool;
-
-        pub fn kuzu_prepared_statement_is_success(
-            prepared_statement: *mut kuzu_prepared_statement,
-        ) -> bool;
-
-        pub fn kuzu_prepared_statement_get_error_message(
-            prepared_statement: *mut kuzu_prepared_statement,
-        ) -> *mut ::std::os::raw::c_char;
-
-        pub fn kuzu_prepared_statement_bind_value(
-            prepared_statement: *mut kuzu_prepared_statement,
-            param_name: *const ::std::os::raw::c_char,
-            value: *mut kuzu_value,
-        );
-        pub fn kuzu_connection_execute(
-            connection: *mut connection::ffi::kuzu_connection,
-            prepared_statement: *mut kuzu_prepared_statement,
-        ) -> *mut query_result::ffi::kuzu_query_result;
     }
 }

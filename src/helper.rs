@@ -1,8 +1,6 @@
 #[repr(transparent)]
-#[derive(Debug)]
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct PtrContainer<T: ?Sized>(pub *mut T);
-
 #[macro_export]
 macro_rules! convert_inner_to_owned_string {
     ($inner:expr) => {{

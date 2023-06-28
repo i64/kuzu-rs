@@ -1,5 +1,5 @@
+use crate::ffi;
 use crate::into_cstr;
-
 #[derive(Clone, Copy)]
 pub enum LogLevel {
     Info,
@@ -82,24 +82,5 @@ impl Database {
 impl Drop for Database {
     fn drop(&mut self) {
         unsafe { ffi::kuzu_database_destroy(self.0) }
-    }
-}
-
-pub(crate) mod ffi {
-    #[repr(C)]
-    #[derive(Debug, Copy, Clone)]
-    pub struct kuzu_database {
-        _database: *mut ::std::os::raw::c_void,
-    }
-
-    extern "C" {
-        pub fn kuzu_database_init(
-            database_path: *const ::std::os::raw::c_char,
-            buffer_pool_size: u64,
-        ) -> *mut kuzu_database;
-
-        pub fn kuzu_database_set_logging_level(logging_level: *const ::std::os::raw::c_char);
-
-        pub fn kuzu_database_destroy(database: *mut kuzu_database);
     }
 }

@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::connection::{self, Connection};
-
+use crate::ffi;
 pub enum TransactionType {
     Readonly,
     Writeonly,
@@ -77,18 +77,5 @@ impl Drop for Transaction<'_> {
 impl Connection {
     pub fn transaction(&self, transaction_type: TransactionType) -> Transaction {
         Transaction::new(self, transaction_type)
-    }
-}
-
-pub(crate) mod ffi {
-    extern "C" {
-        pub fn kuzu_connection_begin_read_only_transaction(
-            connection: *mut super::connection::ffi::kuzu_connection,
-        );
-        pub fn kuzu_connection_begin_write_transaction(
-            connection: *mut super::connection::ffi::kuzu_connection,
-        );
-        pub fn kuzu_connection_commit(connection: *mut super::connection::ffi::kuzu_connection);
-        pub fn kuzu_connection_rollback(connection: *mut super::connection::ffi::kuzu_connection);
     }
 }

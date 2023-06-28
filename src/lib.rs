@@ -7,3 +7,6 @@ pub(crate) mod helper;
 pub mod prepared_statement;
 pub mod transaction;
 pub mod types;
+
+#[allow(warnings, unused)]
+mod ffi;

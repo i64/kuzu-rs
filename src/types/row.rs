@@ -1,10 +1,10 @@
 use crate::{
+    ffi::{kuzu_flat_tuple, kuzu_flat_tuple_get_value},
     helper::PtrContainer,
-    query_result::ffi::{kuzu_flat_tuple, kuzu_flat_tuple_get_value},
-    types::value::KuzuVal,
 };
 
-#[derive(Clone)]
+use super::value::KuzuValue;
+#[derive(Debug)]
 pub struct Row {
     flat_tuple: *mut kuzu_flat_tuple,
     size: u64,
@@ -15,10 +15,10 @@ impl Row {
         Self { flat_tuple, size }
     }
 
-    pub fn get(&self, idx: u64) -> Option<KuzuVal> {
+    pub fn get(&self, idx: u64) -> Option<KuzuValue> {
         assert!(self.size >= idx);
-        let val = unsafe { kuzu_flat_tuple_get_value(self.flat_tuple, idx) };
-        Some(KuzuVal::from(PtrContainer(val)))
+        let val = PtrContainer(unsafe { kuzu_flat_tuple_get_value(self.flat_tuple, idx) });
+        Some(val.into())
     }
 }
 
@@ -30,7 +30,7 @@ macro_rules! impl_from_row_for_tuple {
     ($( ($idx:tt) -> $T:ident );+;) => {
         impl<'r, $($T,)+> FromRow<'r> for ($($T,)+)
         where
-            $($T: From<KuzuVal>,)+
+            $($T: From<KuzuValue>,)+
 
         {
             #[inline]
@@ -43,7 +43,10 @@ macro_rules! impl_from_row_for_tuple {
 
 impl FromRow<'_> for Row {
     fn from_row(row: &Row) -> Option<Self> {
-        Some(row.clone())
+        Some(Row {
+            flat_tuple: row.flat_tuple,
+            size: row.size,
+        })
     }
 }
 impl_from_row_for_tuple!(

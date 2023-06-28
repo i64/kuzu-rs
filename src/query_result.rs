@@ -7,6 +7,8 @@ use crate::{
     types::row::{FromRow, Row},
 };
 
+use crate::ffi;
+
 pub struct QueryResult(*mut ffi::kuzu_query_result);
 
 impl From<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
@@ -79,72 +81,5 @@ impl Connection {
         let cst = into_cstr!(query.as_ref());
         let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst) };
         PtrContainer(raw_result).into()
-    }
-}
-
-pub(crate) mod ffi {
-    use crate::{connection::ffi::kuzu_connection, types::value::ffi::kuzu_value};
-
-    #[repr(C)]
-    pub struct kuzu_query_result {
-        _query_result: *mut ::std::os::raw::c_void,
-    }
-
-    #[repr(C)]
-    pub struct kuzu_flat_tuple {
-        _flat_tuple: *mut ::std::os::raw::c_void,
-    }
-
-    extern "C" {
-        pub fn kuzu_connection_query(
-            connection: *mut kuzu_connection,
-            query: *const ::std::os::raw::c_char,
-        ) -> *mut kuzu_query_result;
-
-        pub fn kuzu_query_result_destroy(query_result: *mut kuzu_query_result);
-
-        pub fn kuzu_query_result_is_success(query_result: *mut kuzu_query_result) -> bool;
-
-        pub fn kuzu_query_result_get_error_message(
-            query_result: *mut kuzu_query_result,
-        ) -> *mut ::std::os::raw::c_char;
-
-        pub fn kuzu_query_result_get_num_columns(query_result: *mut kuzu_query_result) -> u64;
-
-        // pub fn kuzu_query_result_get_column_data_type(
-        //     query_result: *mut kuzu_query_result,
-        //     index: u64,
-        // ) -> *mut kuzu_logical_type;
-
-        pub fn kuzu_query_result_get_num_tuples(query_result: *mut kuzu_query_result) -> u64;
-
-        // pub fn kuzu_query_result_get_query_summary(
-        //     query_result: *mut kuzu_query_result,
-        // ) -> *mut kuzu_query_summary;
-
-        pub fn kuzu_query_result_has_next(query_result: *mut kuzu_query_result) -> bool;
-
-        pub fn kuzu_query_result_get_next(
-            query_result: *mut kuzu_query_result,
-        ) -> *mut kuzu_flat_tuple;
-
-        pub fn kuzu_flat_tuple_get_value(
-            flat_tuple: *mut kuzu_flat_tuple,
-            index: u64,
-        ) -> *mut kuzu_value;
-
-        // pub fn kuzu_query_result_to_string(
-        //     query_result: *mut kuzu_query_result,
-        // ) -> *mut ::std::os::raw::c_char;
-
-        // pub fn kuzu_query_result_write_to_csv(
-        //     query_result: *mut kuzu_query_result,
-        //     file_path: *const ::std::os::raw::c_char,
-        //     delimiter: ::std::os::raw::c_char,
-        //     escape_char: ::std::os::raw::c_char,
-        //     new_line: ::std::os::raw::c_char,
-        // );
-
-        // pub fn kuzu_query_result_reset_iterator(query_result: *mut kuzu_query_result);
     }
 }

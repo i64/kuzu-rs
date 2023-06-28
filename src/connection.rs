@@ -2,7 +2,7 @@ use crate::helper::PtrContainer;
 use std::cell::RefCell;
 
 use super::database;
-
+use crate::ffi;
 #[repr(u8)]
 pub(crate) enum ConnectionTransactionMode {
     AutoCommit = 0,
@@ -39,39 +39,5 @@ impl Connection {
 impl Drop for Connection {
     fn drop(&mut self) {
         unsafe { ffi::kuzu_connection_destroy(self.to_inner()) }
-    }
-}
-pub(crate) mod ffi {
-    #[repr(C)]
-    pub struct kuzu_connection {
-        _connection: *mut ::std::os::raw::c_void,
-    }
-
-    extern "C" {
-        pub fn kuzu_connection_init(
-            database: *mut super::database::ffi::kuzu_database,
-        ) -> *mut kuzu_connection;
-        pub fn kuzu_connection_destroy(connection: *mut kuzu_connection);
-        pub fn kuzu_connection_set_max_num_thread_for_exec(
-            connection: *mut kuzu_connection,
-            num_threads: u64,
-        );
-        pub fn kuzu_connection_get_max_num_thread_for_exec(connection: *mut kuzu_connection)
-            -> u64;
-
-        // pub fn kuzu_connection_get_node_table_names(
-        //     connection: *mut kuzu_connection,
-        // ) -> *mut ::std::os::raw::c_char;
-        // pub fn kuzu_connection_get_rel_table_names(
-        //     connection: *mut kuzu_connection,
-        // ) -> *mut ::std::os::raw::c_char;
-        // pub fn kuzu_connection_get_node_property_names(
-        //     connection: *mut kuzu_connection,
-        //     table_name: *const ::std::os::raw::c_char,
-        // ) -> *mut ::std::os::raw::c_char;
-        // pub fn kuzu_connection_get_rel_property_names(
-        //     connection: *mut kuzu_connection,
-        //     table_name: *const ::std::os::raw::c_char,
-        // ) -> *mut ::std::os::raw::c_char;
     }
 }
