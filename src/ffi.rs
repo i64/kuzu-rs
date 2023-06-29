@@ -253,7 +253,7 @@ extern "C" {
     pub fn kuzu_query_result_get_column_name(
         query_result: *mut kuzu_query_result,
         index: u64,
-    ) -> *mut ::std::os::raw::c_char;
+    ) -> *const ::std::os::raw::c_char;
 
     pub fn kuzu_query_result_get_column_data_type(
         query_result: *mut kuzu_query_result,

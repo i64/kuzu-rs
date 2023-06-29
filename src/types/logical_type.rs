@@ -54,7 +54,6 @@ impl TryFrom<u32> for LogicalTypeID {
 #[derive(Debug)]
 pub(crate) struct LogicaType {
     pub(crate) tid: LogicalTypeID,
-    pub(crate) inner_ptr: *mut ffi::kuzu_logical_type,
     pub(crate) fixed_num_elements_in_list: u64,
 }
 
@@ -64,19 +63,6 @@ impl PartialEq for LogicaType {
     }
 }
 
-impl Clone for LogicaType {
-    fn clone(&self) -> Self {
-        let new_inner = unsafe { ffi::kuzu_data_type_clone(self.inner_ptr) };
-
-        assert!(!new_inner.is_null());
-
-        Self {
-            tid: self.tid,
-            inner_ptr: new_inner,
-            fixed_num_elements_in_list: self.fixed_num_elements_in_list,
-        }
-    }
-}
 
 impl LogicaType {
     fn new_with_id(
@@ -87,19 +73,10 @@ impl LogicaType {
         match inner.is_null() {
             true => None,
             false => Some(Self {
-                inner_ptr: inner,
                 tid,
                 fixed_num_elements_in_list,
             }),
         }
-    }
-
-    fn new_subtype(&self, tid: LogicalTypeID, fixed_num_elements_in_list: u64) -> Option<Self> {
-        let ptr = unsafe {
-            ffi::kuzu_data_type_create(tid as u32, self.inner_ptr, fixed_num_elements_in_list)
-        };
-
-        Self::new_with_id(tid, ptr, fixed_num_elements_in_list)
     }
 }
 

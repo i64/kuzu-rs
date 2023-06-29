@@ -6,7 +6,7 @@ use super::logical_type::{LogicaType, LogicalTypeID};
 
 use crate::ffi;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum KuzuValue {
     Node(Node),
     Rel(Relation),
@@ -109,7 +109,7 @@ impl From<&KuzuValue> for PtrContainer<ffi::kuzu_value> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct InternalId {
     offset: u64,
     table_id: u64,
@@ -124,7 +124,7 @@ impl From<ffi::kuzu_internal_id_t> for InternalId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
     id: InternalId,
     label: String,
@@ -164,7 +164,7 @@ impl From<PtrContainer<ffi::kuzu_node_val>> for Node {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Relation {
     label: String,
     src: InternalId,
@@ -204,12 +204,12 @@ impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
         }
     }
 }
-#[derive(Default, Debug)]
+#[derive(Debug, Clone)]
 pub struct FixedList {
     inner: Vec<KuzuValue>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug, Clone)]
 pub struct VarList {
     inner: Vec<KuzuValue>,
 }

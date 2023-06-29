@@ -4,7 +4,8 @@ pub struct PtrContainer<T: ?Sized>(pub *mut T);
 #[macro_export]
 macro_rules! convert_inner_to_owned_string {
     ($inner:expr) => {{
-        let cstr = unsafe { ::std::ffi::CStr::from_ptr($inner) };
+        let _inner = $inner;
+        let cstr = unsafe { ::std::ffi::CStr::from_ptr(_inner) };
         cstr.to_str().unwrap().to_owned()
     }};
 }

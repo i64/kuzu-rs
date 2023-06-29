@@ -1,4 +1,4 @@
-use super::value::{KuzuValue, Node, Relation};
+use super::value::KuzuValue;
 
 impl From<bool> for KuzuValue {
     fn from(value: bool) -> Self {

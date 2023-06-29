@@ -1,54 +1,54 @@
-use crate::{
-    ffi::{kuzu_flat_tuple, kuzu_flat_tuple_get_value},
-    helper::PtrContainer,
-};
+use std::{collections::HashMap, rc::Rc};
 
 use super::value::KuzuValue;
 #[derive(Debug)]
 pub struct Row {
-    flat_tuple: *mut kuzu_flat_tuple,
-    size: u64,
+    keys: Rc<HashMap<String, usize>>,
+    values: Vec<KuzuValue>,
 }
 
 impl Row {
-    pub(crate) fn new(flat_tuple: *mut kuzu_flat_tuple, size: u64) -> Self {
-        Self { flat_tuple, size }
+    pub(crate) fn new(keys: Rc<HashMap<String, usize>>, values: Vec<KuzuValue>) -> Self {
+        Self { keys, values }
     }
 
-    pub fn get(&self, idx: u64) -> Option<KuzuValue> {
-        assert!(self.size >= idx);
-        let val = PtrContainer(unsafe { kuzu_flat_tuple_get_value(self.flat_tuple, idx) });
-        Some(val.into())
+    pub fn get_ref(&self, idx: usize) -> Option<&KuzuValue> {
+        self.values.get(idx)
     }
-}
 
-pub trait FromRow<'r>: Sized {
-    fn from_row(row: &'r Row) -> Option<Self>;
+    pub fn get_val<T: From<KuzuValue>>(&self, idx: usize) -> Option<T> {
+        Some(self.values[idx].clone().into())
+    }
+
+    pub fn get_ref_by_column<S: AsRef<str>>(&self, column_name: S) -> Option<&KuzuValue> {
+        let key_idx = self.keys.get(column_name.as_ref())?;
+        self.values.get(*key_idx)
+    }
+
+    pub fn get_val_by_column<T: From<KuzuValue>, S: AsRef<str>>(
+        &self,
+        column_name: S,
+    ) -> Option<T> {
+        let key_idx = self.keys.get(column_name.as_ref())?;
+        Some(self.values[*key_idx].clone().into())
+    }
 }
 
 macro_rules! impl_from_row_for_tuple {
     ($( ($idx:tt) -> $T:ident );+;) => {
-        impl<'r, $($T,)+> FromRow<'r> for ($($T,)+)
+        impl<$($T,)+> From<Row> for ($($T,)+)
         where
             $($T: From<KuzuValue>,)+
 
         {
             #[inline]
-            fn from_row(row: &'r Row) -> Option<Self> {
-                Some(($($T::from(row.get($idx as u64)?),)+))
+            fn from(row: Row) -> Self {
+                ($(row.get_val::<$T>($idx).unwrap(),)+)
              }
         }
     };
 }
 
-impl FromRow<'_> for Row {
-    fn from_row(row: &Row) -> Option<Self> {
-        Some(Row {
-            flat_tuple: row.flat_tuple,
-            size: row.size,
-        })
-    }
-}
 impl_from_row_for_tuple!(
     (0) -> T1;
 );

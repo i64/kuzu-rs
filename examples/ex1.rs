@@ -1,7 +1,8 @@
 use kuzu_rs::connection::Connection;
 use kuzu_rs::database::Database;
 use kuzu_rs::types::row::Row;
-use kuzu_rs::types::value::{Node, Relation};
+// use kuzu_rs::types::row::Row;
+use kuzu_rs::types::value::Node; //, Relation};
 
 fn main() {
     let database_path = "test2";
@@ -30,6 +31,7 @@ fn main() {
         .execute();
 
     for r in res.iter::<Row>() {
-        dbg!(r.get(0));
+        let n: Option<Node> = r.get_val_by_column("b");
+        dbg!(&n);
     }
 }

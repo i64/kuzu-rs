@@ -1,10 +1,11 @@
-use std::{ffi::CStr, marker::PhantomData};
+use std::{collections::HashMap, ffi::CStr, marker::PhantomData, rc::Rc};
 
 use crate::{
     connection::Connection,
+    convert_inner_to_owned_string,
     helper::PtrContainer,
     into_cstr,
-    types::row::{FromRow, Row},
+    types::{row::Row, value::KuzuValue},
 };
 
 use crate::ffi;
@@ -29,13 +30,23 @@ impl From<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
 }
 
 impl QueryResult {
-    pub fn iter<'a, R: FromRow<'a>>(&'a self) -> Iter<'a, R> {
+    pub fn iter<R: From<Row>>(&self) -> Iter<R> {
         let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0) };
+        let columns = (0..column_len)
+            .map(|idx| {
+                (
+                    convert_inner_to_owned_string!(unsafe {
+                        ffi::kuzu_query_result_get_column_name(self.0, idx)
+                    }),
+                    idx as usize,
+                )
+            })
+            .collect();
         let len = unsafe { ffi::kuzu_query_result_get_num_tuples(self.0) } as usize;
         Iter {
             _m: PhantomData,
             inner: self,
-            column_len,
+            columns: Rc::new(columns),
             len,
         }
     }
@@ -47,30 +58,38 @@ impl Drop for QueryResult {
     }
 }
 
-pub struct Iter<'qr, R: FromRow<'qr>> {
+pub struct Iter<'qr, R: From<Row>> {
     inner: &'qr QueryResult,
-    column_len: u64,
+    columns: Rc<HashMap<String, usize>>,
     len: usize,
     _m: PhantomData<R>,
 }
 
-impl<R> Iterator for Iter<'_, R>
+impl<'a, R> Iterator for Iter<'a, R>
 where
-    R: for<'a> FromRow<'a>,
+    R: From<Row>,
 {
     type Item = R;
+
     fn next(&mut self) -> Option<Self::Item> {
-        unsafe {
-            if ffi::kuzu_query_result_has_next(self.inner.0) {
-                let _row = ffi::kuzu_query_result_get_next(self.inner.0);
-                assert!(!_row.is_null());
-                let row = Row::new(_row, self.column_len);
-                self.len -= 1;
-                return Self::Item::from_row(&row);
-            }
+        let has_next = unsafe { ffi::kuzu_query_result_has_next(self.inner.0) };
+        if !has_next {
+            return None;
         }
-        None
+        let _row = unsafe { ffi::kuzu_query_result_get_next(self.inner.0) };
+        assert!(!_row.is_null());
+
+        let values: Vec<KuzuValue> = (0..self.columns.len())
+            .map(|idx| {
+                PtrContainer(unsafe { ffi::kuzu_flat_tuple_get_value(_row, idx as u64) }).into()
+            })
+            .collect();
+
+        let row = Row::new(Rc::clone(&self.columns), values);
+        self.len -= 1;
+        Some(Self::Item::from(row))
     }
+
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len, Some(self.len))
     }

@@ -56,27 +56,26 @@ impl From<KuzuValue> for f64 {
 
 impl From<KuzuValue> for String {
     fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::String(inner) = value {
-            return inner;
+        match value {
+            KuzuValue::String(string) => string,
+            _ => unreachable!(),
         }
-        panic!("1222222")
     }
 }
 
 impl From<KuzuValue> for Node {
     fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Node(inner) = value {
-            return inner;
+        match value {
+            KuzuValue::Node(node) => node,
+            _ => unreachable!(),
         }
-        panic!("1222222")
     }
 }
-
 impl From<KuzuValue> for Relation {
     fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Rel(inner) = value {
-            return inner;
+        match value {
+            KuzuValue::Rel(rel) => rel,
+            _ => unreachable!(),
         }
-        panic!("1222222")
     }
 }
