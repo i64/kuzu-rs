@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{convert_inner_to_owned_string, helper::PtrContainer, into_cstr};
+use crate::{
+    error,
+    helper::{convert_inner_to_owned_string, PtrContainer},
+    into_cstr,
+};
 
 use super::logical_type::{LogicaType, LogicalTypeID};
 
@@ -26,11 +30,31 @@ pub enum KuzuValue {
     // Struct,
 }
 
-impl From<PtrContainer<ffi::kuzu_value>> for KuzuValue {
-    fn from(value: PtrContainer<ffi::kuzu_value>) -> Self {
-        let logical_type = LogicaType::from(&value);
+impl KuzuValue {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Node(_) => "Self::Node",
+            Self::Rel(_) => "Self::Rel",
+            Self::Bool(_) => "Self::Bool",
+            Self::Int64(_) => "Self::Int64",
+            Self::Int32(_) => "Self::Int32",
+            Self::Int16(_) => "Self::Int16",
+            Self::Double(_) => "Self::Double",
+            Self::Float(_) => "Self::Float",
+            Self::String(_) => "Self::String",
+            Self::InternalId(_) => "Self::InternalId",
+            Self::FixedList(_) => "Self::FixedList",
+            Self::VarList(_) => "Self::VarList",
+        }
+    }
+}
+impl TryFrom<PtrContainer<ffi::kuzu_value>> for KuzuValue {
+    type Error = error::Error;
 
-        match logical_type.tid {
+    fn try_from(value: PtrContainer<ffi::kuzu_value>) -> Result<Self, Self::Error> {
+        let logical_type = LogicaType::try_from(&value)?;
+
+        let res = match logical_type.tid {
             LogicalTypeID::Bool => KuzuValue::Bool(unsafe { ffi::kuzu_value_get_bool(value.0) }),
             LogicalTypeID::Int16 => KuzuValue::Int16(unsafe { ffi::kuzu_value_get_int16(value.0) }),
             LogicalTypeID::Int32 => KuzuValue::Int32(unsafe { ffi::kuzu_value_get_int32(value.0) }),
@@ -41,16 +65,16 @@ impl From<PtrContainer<ffi::kuzu_value>> for KuzuValue {
             }
             LogicalTypeID::String => {
                 let str_ptr = unsafe { ffi::kuzu_value_get_string(value.0) };
-                KuzuValue::String(convert_inner_to_owned_string!(str_ptr))
+                KuzuValue::String(convert_inner_to_owned_string(str_ptr)?)
             }
             LogicalTypeID::Node => {
                 let rel_val: PtrContainer<ffi::kuzu_node_val> =
                     PtrContainer(unsafe { ffi::kuzu_value_get_node_val(value.0) });
-                KuzuValue::Node(rel_val.into())
+                KuzuValue::Node(rel_val.try_into()?)
             }
             LogicalTypeID::Rel => {
                 let rel_val = PtrContainer(unsafe { ffi::kuzu_value_get_rel_val(value.0) });
-                KuzuValue::Rel(rel_val.into())
+                KuzuValue::Rel(rel_val.try_into()?)
             }
             LogicalTypeID::InternalId => {
                 let internal_id = unsafe { ffi::kuzu_value_get_internal_id(value.0) }.into();
@@ -60,9 +84,9 @@ impl From<PtrContainer<ffi::kuzu_value>> for KuzuValue {
                 let elems = (0..(logical_type.fixed_num_elements_in_list))
                     .map(|idx| {
                         PtrContainer(unsafe { ffi::kuzu_value_get_list_element(value.0, idx) })
-                            .into()
+                            .try_into()
                     })
-                    .collect();
+                    .collect::<Result<_, _>>()?;
 
                 KuzuValue::FixedList(FixedList { inner: elems })
             }
@@ -71,9 +95,9 @@ impl From<PtrContainer<ffi::kuzu_value>> for KuzuValue {
                 let elems: Vec<KuzuValue> = (0..list_size)
                     .map(|idx| {
                         PtrContainer(unsafe { ffi::kuzu_value_get_list_element(value.0, idx) })
-                            .into()
+                            .try_into()
                     })
-                    .collect();
+                    .collect::<Result<_, _>>()?;
 
                 KuzuValue::VarList(VarList { inner: elems })
             }
@@ -83,12 +107,15 @@ impl From<PtrContainer<ffi::kuzu_value>> for KuzuValue {
             // LogicalTypeID::Any => todo!(),
             // LogicalTypeID::Struct => todo!(),
             ty => todo!("{:?}", ty),
-        }
+        };
+
+        Ok(res)
     }
 }
 
-impl From<&KuzuValue> for PtrContainer<ffi::kuzu_value> {
-    fn from(value: &KuzuValue) -> Self {
+impl TryFrom<&KuzuValue> for PtrContainer<ffi::kuzu_value> {
+    type Error = error::Error;
+    fn try_from(value: &KuzuValue) -> Result<Self, Self::Error> {
         let res = unsafe {
             match value {
                 KuzuValue::Node(_inner) => todo!(),
@@ -100,12 +127,12 @@ impl From<&KuzuValue> for PtrContainer<ffi::kuzu_value> {
                 KuzuValue::Double(inner) => ffi::kuzu_value_create_double(*inner),
                 KuzuValue::Float(inner) => ffi::kuzu_value_create_float(*inner),
                 KuzuValue::String(inner) => {
-                    ffi::kuzu_value_create_string(into_cstr!(inner.as_str()))
+                    ffi::kuzu_value_create_string(into_cstr!(inner.as_str())?.as_ptr())
                 }
                 _ => todo!(),
             }
         };
-        PtrContainer(res)
+        Ok(PtrContainer(res))
     }
 }
 
@@ -131,36 +158,51 @@ pub struct Node {
     properties: HashMap<String, KuzuValue>,
 }
 
-impl From<PtrContainer<ffi::kuzu_node_val>> for Node {
-    fn from(value: PtrContainer<ffi::kuzu_node_val>) -> Self {
+impl TryFrom<PtrContainer<ffi::kuzu_node_val>> for Node {
+    type Error = error::Error;
+    fn try_from(value: PtrContainer<ffi::kuzu_node_val>) -> Result<Self, Self::Error> {
         let id = unsafe { ffi::kuzu_node_val_get_id(value.0) }.into();
 
         let label = {
             let inner = unsafe { ffi::kuzu_node_val_get_label_name(value.0) };
-            convert_inner_to_owned_string!(inner)
+            convert_inner_to_owned_string(inner)?
         };
 
         let properties = {
             let property_size = unsafe { ffi::kuzu_node_val_get_property_size(value.0) };
             (0..property_size)
                 .map(|idx| {
-                    let key = {
+                    let _key = {
                         let inner =
                             unsafe { ffi::kuzu_node_val_get_property_name_at(value.0, idx) };
-                        convert_inner_to_owned_string!(inner)
+                        convert_inner_to_owned_string(inner)
                     };
-                    let val = unsafe { ffi::kuzu_node_val_get_property_value_at(value.0, idx) };
 
-                    (key, (PtrContainer(val)).into())
+                    let key = match _key {
+                        Ok(key) => key,
+                        Err(e) => return Err(e),
+                    };
+
+                    let _val = {
+                        let val = unsafe { ffi::kuzu_node_val_get_property_value_at(value.0, idx) };
+                        KuzuValue::try_from(PtrContainer(val))
+                    };
+
+                    let val = match _val {
+                        Ok(val) => val,
+                        Err(e) => return Err(e),
+                    };
+
+                    Ok((key, val))
                 })
-                .collect()
+                .collect::<Result<_, _>>()?
         };
 
-        Self {
+        Ok(Self {
             id,
             label,
             properties,
-        }
+        })
     }
 }
 
@@ -172,11 +214,13 @@ pub struct Relation {
     properties: HashMap<String, KuzuValue>,
 }
 
-impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
-    fn from(value: PtrContainer<ffi::kuzu_rel_val>) -> Self {
+impl TryFrom<PtrContainer<ffi::kuzu_rel_val>> for Relation {
+    type Error = error::Error;
+
+    fn try_from(value: PtrContainer<ffi::kuzu_rel_val>) -> Result<Self, Self::Error> {
         let label = {
             let inner = unsafe { ffi::kuzu_rel_val_get_label_name(value.0) };
-            convert_inner_to_owned_string!(inner)
+            convert_inner_to_owned_string(inner)?
         };
         let src = unsafe { ffi::kuzu_rel_val_get_src_id(value.0) }.into();
         let dst = unsafe { ffi::kuzu_rel_val_get_dst_id(value.0) }.into();
@@ -185,23 +229,37 @@ impl From<PtrContainer<ffi::kuzu_rel_val>> for Relation {
             let property_size = unsafe { ffi::kuzu_rel_val_get_property_size(value.0) };
             (0..property_size)
                 .map(|idx| {
-                    let key = {
+                    let _key = {
                         let inner = unsafe { ffi::kuzu_rel_val_get_property_name_at(value.0, idx) };
-                        convert_inner_to_owned_string!(inner)
+                        convert_inner_to_owned_string(inner)
                     };
-                    let val = unsafe { ffi::kuzu_rel_val_get_property_value_at(value.0, idx) };
 
-                    (key, KuzuValue::from(PtrContainer(val)))
+                    let key = match _key {
+                        Ok(key) => key,
+                        Err(e) => return Err(e),
+                    };
+
+                    let _val = {
+                        let val = unsafe { ffi::kuzu_rel_val_get_property_value_at(value.0, idx) };
+                        KuzuValue::try_from(PtrContainer(val))
+                    };
+
+                    let val = match _val {
+                        Ok(val) => val,
+                        Err(e) => return Err(e),
+                    };
+
+                    Ok((key, val))
                 })
-                .collect()
+                .collect::<Result<_, _>>()?
         };
 
-        Self {
+        Ok(Self {
             label,
             src,
             dst,
             properties,
-        }
+        })
     }
 }
 #[derive(Debug, Clone)]

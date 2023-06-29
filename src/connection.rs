@@ -1,4 +1,4 @@
-use crate::helper::PtrContainer;
+use crate::{error, helper::PtrContainer};
 use std::cell::RefCell;
 
 use super::database;
@@ -12,14 +12,10 @@ pub(crate) enum ConnectionTransactionMode {
 pub struct Connection(RefCell<PtrContainer<ffi::kuzu_connection>>);
 
 impl Connection {
-    pub fn new(database: &mut database::Database) -> Option<Self> {
+    pub fn new(database: &mut database::Database) -> error::Result<Self> {
         unsafe {
-            let this = ffi::kuzu_connection_init(database.0);
-            if this.is_null() {
-                None
-            } else {
-                Some(Self(RefCell::new(PtrContainer(this))))
-            }
+            let this = PtrContainer(ffi::kuzu_connection_init(database.0));
+            Ok(Self(RefCell::new(this.validate()?)))
         }
     }
 

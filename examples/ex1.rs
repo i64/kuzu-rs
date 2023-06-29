@@ -8,7 +8,8 @@ fn main() {
     let database_path = "test2";
     let mut db = Database::builder(database_path)
         .with_log_level(kuzu_rs::database::LogLevel::Debug)
-        .build();
+        .build()
+        .unwrap();
 
     let mut connection = Connection::new(&mut db).unwrap();
 
@@ -23,15 +24,16 @@ fn main() {
     connection.query("COPY Follows FROM \"../test_data/follows.csv\";");
     connection.query("COPY LivesIn FROM \"../test_data/lives_in.csv\";");
 
-    // let res = connection.query("RETURN [\"Alice\", \"Bob\"] AS l;");
 
     let res = connection
         .prepare("MATCH (a:User)<-[e:Follows]-(b:User)  WHERE a.age > $1 RETURN a, e, b")
+        .unwrap()
         .bind(1i64)
-        .execute();
+        .execute()
+        .unwrap();
 
-    for r in res.iter::<Row>() {
-        let n: Option<Node> = r.get_val_by_column("b");
+    for r in res.iter::<Row>().unwrap() {
+        let n: Node = r.get_val_by_column("b").unwrap();
         dbg!(&n);
     }
 }

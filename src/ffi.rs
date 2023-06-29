@@ -172,7 +172,7 @@ extern "C" {
 
     pub fn kuzu_prepared_statement_get_error_message(
         prepared_statement: *mut kuzu_prepared_statement,
-    ) -> *mut ::std::os::raw::c_char;
+    ) -> *const ::std::os::raw::c_char;
 
     pub fn kuzu_prepared_statement_bind_bool(
         prepared_statement: *mut kuzu_prepared_statement,

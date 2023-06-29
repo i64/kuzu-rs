@@ -1,15 +1,18 @@
 use crate::connection::{self, Connection};
-use crate::ffi;
+use crate::ffi::kuzu_prepared_statement;
+use crate::helper::convert_inner_to_owned_string;
 use crate::helper::PtrContainer;
-use crate::into_cstr;
 use crate::query_result::QueryResult;
 use crate::types::value::KuzuValue;
+use crate::{error, ffi, into_cstr};
 use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
 
 struct Argument(KuzuValue);
 pub struct Statement<'conn> {
     conn: &'conn connection::Connection,
-    stmt: *mut ffi::kuzu_prepared_statement,
+    stmt: PtrContainer<ffi::kuzu_prepared_statement>,
+    _stmt: CString,
     args: Vec<Argument>,
 }
 
@@ -40,35 +43,33 @@ static STMT_LOOKUP: [&CStr; 256] = static_cstr![
 ];
 
 impl<'conn> Statement<'conn> {
-    fn new(conn: &'conn Connection, query: &str) -> Option<Self> {
-        let cstring = CString::new(query).unwrap();
+    fn new(conn: &'conn Connection, query: &str) -> error::Result<Self> {
+        let cstring = into_cstr!(query)?;
         let stmt = unsafe { ffi::kuzu_connection_prepare(conn.to_inner(), cstring.as_ptr()) };
         if stmt.is_null() {
-            return None;
+            return Err(error::Error::FFIGotNull(std::any::type_name::<
+                *mut kuzu_prepared_statement,
+            >()));
+        }
+        let is_success = unsafe { ffi::kuzu_prepared_statement_is_success(stmt) };
+
+        if !is_success {
+            let raw_error_msg = unsafe { ffi::kuzu_prepared_statement_get_error_message(stmt) };
+            let error_msg = convert_inner_to_owned_string(raw_error_msg)?;
+            return Err(error::Error::ConnectionError(error_msg));
         }
 
-        unsafe {
-            if !ffi::kuzu_prepared_statement_is_success(stmt) {
-                let raw_error_msg = ffi::kuzu_prepared_statement_get_error_message(stmt);
-                if !raw_error_msg.is_null() {
-                    let error_msg = CStr::from_ptr(raw_error_msg).to_str().unwrap().to_owned();
-                    panic!("{}", error_msg)
-                    // Error::XXX(error_msg)
-                }
-                // Error::XXX(error_msg)
-                return None;
-            }
+        let allow_active_transaction =
+            unsafe { ffi::kuzu_prepared_statement_allow_active_transaction(stmt) };
+
+        if !allow_active_transaction {
+            return Err(error::Error::TransactionNotAllowed);
         }
 
-        unsafe {
-            if !ffi::kuzu_prepared_statement_allow_active_transaction(stmt) {
-                return None;
-            }
-        }
-
-        Some(Self {
+        Ok(Self {
             conn,
-            stmt,
+            stmt: PtrContainer(stmt),
+            _stmt: cstring,
             args: vec![],
         })
     }
@@ -79,29 +80,27 @@ impl<'conn> Statement<'conn> {
         self
     }
 
-    pub fn execute(&self) -> QueryResult {
-        self.args.iter().enumerate().for_each(|(idx, arg)| {
-            let val = PtrContainer::from(&arg.0);
-            let param_name = if STMT_LOOKUP.len() > idx {
-                STMT_LOOKUP[idx].as_ptr()
-            } else {
-                let s_idx = format!("{}", idx + 1);
-                into_cstr!(s_idx)
-            };
+    pub fn execute(&self) -> error::Result<QueryResult> {
+        self.args.iter().enumerate().try_for_each(|(idx, arg)| {
+            let val = PtrContainer::try_from(&arg.0)?;
+            assert!(STMT_LOOKUP.len() > idx);
+            let param_name = STMT_LOOKUP[idx].as_ptr();
 
             unsafe {
-                ffi::kuzu_prepared_statement_bind_value(self.stmt, param_name, val.0);
-            }
-        });
+                ffi::kuzu_prepared_statement_bind_value(self.stmt.0, param_name, val.0);
+            };
+            Ok(())
+        })?;
 
-        let raw_result = unsafe { ffi::kuzu_connection_execute(self.conn.to_inner(), self.stmt) };
-        PtrContainer(raw_result).into()
+        let raw_result =
+            unsafe { ffi::kuzu_connection_execute(self.conn.to_inner(), self.stmt.0) };
+        PtrContainer(raw_result).try_into()
     }
 }
 
 impl Connection {
-    pub fn prepare<S: AsRef<str>>(&mut self, query: S) -> Statement {
-        let query = query.as_ref();
-        Statement::new(self, query).unwrap()
+    pub fn prepare<S: AsRef<str>>(&mut self, query: S) -> error::Result<Statement> {
+    let query = query.as_ref();
+        Statement::new(self, query)
     }
 }

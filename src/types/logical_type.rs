@@ -1,6 +1,6 @@
 use crate::helper::PtrContainer;
 
-use crate::ffi;
+use crate::{error, ffi};
 
 #[repr(u32)]
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -25,7 +25,7 @@ pub enum LogicalTypeID {
 }
 
 impl TryFrom<u32> for LogicalTypeID {
-    type Error = ();
+    type Error = error::Error;
 
     fn try_from(v: u32) -> Result<Self, Self::Error> {
         match v {
@@ -46,7 +46,7 @@ impl TryFrom<u32> for LogicalTypeID {
             x if x == LogicalTypeID::String as u32 => Ok(LogicalTypeID::String),
             x if x == LogicalTypeID::VarList as u32 => Ok(LogicalTypeID::VarList),
             x if x == LogicalTypeID::Struct as u32 => Ok(LogicalTypeID::Struct),
-            _ => Err(()),
+            _ => unreachable!(),
         }
     }
 }
@@ -63,16 +63,15 @@ impl PartialEq for LogicaType {
     }
 }
 
-
 impl LogicaType {
     fn new_with_id(
         tid: LogicalTypeID,
         inner: *mut ffi::kuzu_logical_type,
         fixed_num_elements_in_list: u64,
-    ) -> Option<Self> {
+    ) -> error::Result<Self> {
         match inner.is_null() {
-            true => None,
-            false => Some(Self {
+            true => Err(error::Error::FFIGotNull(std::any::type_name::<Self>())),
+            false => Ok(Self {
                 tid,
                 fixed_num_elements_in_list,
             }),
@@ -80,30 +79,26 @@ impl LogicaType {
     }
 }
 
-impl From<&PtrContainer<ffi::kuzu_value>> for LogicaType {
-    fn from(value: &PtrContainer<ffi::kuzu_value>) -> Self {
-        assert!(!value.0.is_null());
-        let logical_type = unsafe { ffi::kuzu_value_get_data_type(value.0) };
-        assert!(!logical_type.is_null());
-
-        PtrContainer(logical_type).into()
+impl TryFrom<&PtrContainer<ffi::kuzu_value>> for LogicaType {
+    type Error = error::Error;
+    fn try_from(value: &PtrContainer<ffi::kuzu_value>) -> Result<Self, Self::Error> {
+        let logical_type =
+            PtrContainer(unsafe { ffi::kuzu_value_get_data_type(value.validate()?.0) });
+        Ok(logical_type.validate()?.try_into()?)
     }
 }
 
-impl From<PtrContainer<ffi::kuzu_logical_type>> for LogicaType {
-    fn from(value: PtrContainer<ffi::kuzu_logical_type>) -> Self {
-        if value.0.is_null() {
-            unimplemented!()
-        }
-
+impl TryFrom<PtrContainer<ffi::kuzu_logical_type>> for LogicaType {
+    type Error = error::Error;
+    fn try_from(value: PtrContainer<ffi::kuzu_logical_type>) -> Result<Self, Self::Error> {
         let tid = {
-            let _tid = unsafe { ffi::kuzu_data_type_get_id(value.0) };
-            LogicalTypeID::try_from(_tid).unwrap()
+            let _tid = unsafe { ffi::kuzu_data_type_get_id(value.validate()?.0) };
+            LogicalTypeID::try_from(_tid)?
         };
 
         let fixed_num_elements_in_list =
             unsafe { ffi::kuzu_data_type_get_fixed_num_elements_in_list(value.0) };
 
-        Self::new_with_id(tid, value.0, fixed_num_elements_in_list).unwrap()
+        Self::new_with_id(tid, value.0, fixed_num_elements_in_list)
     }
 }

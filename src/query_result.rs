@@ -1,9 +1,9 @@
-use std::{collections::HashMap, ffi::CStr, marker::PhantomData, rc::Rc};
+use std::{collections::HashMap, marker::PhantomData, rc::Rc};
 
 use crate::{
     connection::Connection,
-    convert_inner_to_owned_string,
-    helper::PtrContainer,
+    error,
+    helper::{convert_inner_to_owned_string, PtrContainer},
     into_cstr,
     types::{row::Row, value::KuzuValue},
 };
@@ -12,43 +12,43 @@ use crate::ffi;
 
 pub struct QueryResult(*mut ffi::kuzu_query_result);
 
-impl From<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
-    fn from(value: PtrContainer<ffi::kuzu_query_result>) -> Self {
-        if value.0.is_null() {
-            // return null
+impl TryFrom<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
+    type Error = error::Error;
+
+    fn try_from(value: PtrContainer<ffi::kuzu_query_result>) -> Result<Self, Self::Error> {
+        let is_success = unsafe { ffi::kuzu_query_result_is_success(value.validate()?.0) };
+
+        if !is_success {
+            let s = convert_inner_to_owned_string(unsafe {
+                ffi::kuzu_query_result_get_error_message(value.0)
+            })?;
+            return Err(error::Error::QueryResultError(s));
         }
 
-        unsafe {
-            if !ffi::kuzu_query_result_is_success(value.0) {
-                let s = CStr::from_ptr(ffi::kuzu_query_result_get_error_message(value.0)).to_str();
-                panic!("{}", s.unwrap())
-            }
-        }
-
-        Self(value.0)
+        Ok(Self(value.0))
     }
 }
 
 impl QueryResult {
-    pub fn iter<R: From<Row>>(&self) -> Iter<R> {
+    pub fn iter<R: From<Row>>(&self) -> error::Result<Iter<R>> {
+        let len = unsafe { ffi::kuzu_query_result_get_num_tuples(self.0) } as usize;
         let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0) };
+
         let columns = (0..column_len)
             .map(|idx| {
-                (
-                    convert_inner_to_owned_string!(unsafe {
-                        ffi::kuzu_query_result_get_column_name(self.0, idx)
-                    }),
-                    idx as usize,
-                )
+                convert_inner_to_owned_string(unsafe {
+                    ffi::kuzu_query_result_get_column_name(self.0, idx)
+                })
+                .map(|res| (res, idx as usize))
             })
-            .collect();
-        let len = unsafe { ffi::kuzu_query_result_get_num_tuples(self.0) } as usize;
-        Iter {
+            .collect::<Result<_, _>>()?;
+
+        Ok(Iter {
             _m: PhantomData,
             inner: self,
             columns: Rc::new(columns),
             len,
-        }
+        })
     }
 }
 
@@ -76,14 +76,19 @@ where
         if !has_next {
             return None;
         }
+
         let _row = unsafe { ffi::kuzu_query_result_get_next(self.inner.0) };
-        assert!(!_row.is_null());
+        if _row.is_null() {
+            return None;
+        }
 
         let values: Vec<KuzuValue> = (0..self.columns.len())
             .map(|idx| {
-                PtrContainer(unsafe { ffi::kuzu_flat_tuple_get_value(_row, idx as u64) }).into()
+                let inner = unsafe { ffi::kuzu_flat_tuple_get_value(_row, idx as u64) };
+                PtrContainer(inner).try_into()
             })
-            .collect();
+            .collect::<Result<_, _>>()
+            .ok()?;
 
         let row = Row::new(Rc::clone(&self.columns), values);
         self.len -= 1;
@@ -96,9 +101,9 @@ where
 }
 
 impl Connection {
-    pub fn query<S: AsRef<str>>(&self, query: S) -> QueryResult {
-        let cst = into_cstr!(query.as_ref());
-        let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst) };
-        PtrContainer(raw_result).into()
+    pub fn query<S: AsRef<str>>(&self, query: S) -> error::Result<QueryResult> {
+        let cst = into_cstr!(query.as_ref())?;
+        let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst.as_ptr()) };
+        PtrContainer(raw_result).try_into()
     }
 }

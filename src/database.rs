@@ -1,5 +1,8 @@
 use crate::ffi;
 use crate::into_cstr;
+
+use crate::error;
+
 #[derive(Clone, Copy)]
 pub enum LogLevel {
     Info,
@@ -38,9 +41,9 @@ impl DatabaseBuilder {
         self.log_level = log_level;
         self
     }
-    pub fn build(&self) -> Database {
+    pub fn build(&self) -> error::Result<Database> {
         let db = Database::new(&self.database_path, self.buffer_pool_size);
-        unsafe { Database::set_logging_level(self.log_level) };
+        let _ = Database::set_logging_level(self.log_level)?;
         db
     }
     pub fn with_page_buffer_pool_size(&mut self, buffer_pool_size: u64) -> &mut Self {
@@ -67,15 +70,16 @@ impl Database {
     pub fn builder<S: AsRef<str>>(database_path: S) -> DatabaseBuilder {
         DatabaseBuilder::new(database_path)
     }
-    pub fn new<S: AsRef<str>>(database_path: S, buffer_pool_size: u64) -> Database {
-        let cstring_path = into_cstr!(database_path.as_ref());
-        let this = unsafe { ffi::kuzu_database_init(cstring_path, buffer_pool_size) };
-        Self(this)
+    pub fn new<S: AsRef<str>>(database_path: S, buffer_pool_size: u64) -> error::Result<Database> {
+        let cstring_path = into_cstr!(database_path.as_ref())?;
+        let this = unsafe { ffi::kuzu_database_init(cstring_path.as_ptr(), buffer_pool_size) };
+        Ok(Self(this))
     }
 
-    unsafe fn set_logging_level(log_level: LogLevel) {
-        let cstring_log_level = into_cstr!(log_level.as_str());
-        ffi::kuzu_database_set_logging_level(cstring_log_level);
+    pub fn set_logging_level(log_level: LogLevel) -> error::Result<()> {
+        let cstring_log_level = into_cstr!(log_level.as_str())?;
+        unsafe { ffi::kuzu_database_set_logging_level(cstring_log_level.as_ptr()) };
+        Ok(())
     }
 }
 

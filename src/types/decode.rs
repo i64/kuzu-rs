@@ -1,81 +1,30 @@
+use crate::error;
+
 use super::value::{KuzuValue, Node, Relation};
 
-impl From<KuzuValue> for bool {
-    fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Bool(inner) = value {
-            return inner;
+macro_rules! impl_decode {
+    ($ty:ty, $inner:ident) => {
+        impl TryFrom<KuzuValue> for $ty {
+            type Error = error::Error;
+            fn try_from(value: KuzuValue) -> Result<Self, Self::Error> {
+                match value {
+                    KuzuValue::$inner(inner) => Ok(inner),
+                    ty => Err(error::Error::DecodeError(
+                        ty.name(),
+                        std::any::type_name::<Self>(),
+                    )),
+                }
+            }
         }
-        panic!("1222222")
-    }
+    };
 }
 
-impl From<KuzuValue> for i16 {
-    fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Int16(inner) = value {
-            return inner;
-        }
-        panic!("1222222")
-    }
-}
-
-impl From<KuzuValue> for i32 {
-    fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Int32(inner) = value {
-            return inner;
-        }
-        panic!("1222222")
-    }
-}
-
-impl From<KuzuValue> for i64 {
-    fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Int64(inner) = value {
-            return inner;
-        }
-        panic!("1222222")
-    }
-}
-
-impl From<KuzuValue> for f32 {
-    fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Float(inner) = value {
-            return inner;
-        }
-        panic!("1222222")
-    }
-}
-
-impl From<KuzuValue> for f64 {
-    fn from(value: KuzuValue) -> Self {
-        if let KuzuValue::Double(inner) = value {
-            return inner;
-        }
-        panic!("1222222")
-    }
-}
-
-impl From<KuzuValue> for String {
-    fn from(value: KuzuValue) -> Self {
-        match value {
-            KuzuValue::String(string) => string,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<KuzuValue> for Node {
-    fn from(value: KuzuValue) -> Self {
-        match value {
-            KuzuValue::Node(node) => node,
-            _ => unreachable!(),
-        }
-    }
-}
-impl From<KuzuValue> for Relation {
-    fn from(value: KuzuValue) -> Self {
-        match value {
-            KuzuValue::Rel(rel) => rel,
-            _ => unreachable!(),
-        }
-    }
-}
+impl_decode!(bool, Bool);
+impl_decode!(i16, Int16);
+impl_decode!(i32, Int32);
+impl_decode!(i64, Int64);
+impl_decode!(f32, Float);
+impl_decode!(f64, Double);
+impl_decode!(String, String);
+impl_decode!(Node, Node);
+impl_decode!(Relation, Rel);
