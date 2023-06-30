@@ -6,7 +6,6 @@ use crate::query_result::QueryResult;
 use crate::types::value::KuzuValue;
 use crate::{error, ffi, into_cstr};
 use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
 
 /// Represents an argument for a prepared statement.
 struct Argument(KuzuValue);

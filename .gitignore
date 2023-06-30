@@ -1,8 +1,8 @@
-/target
-/Cargo.lock
-/test
-/libs
-/.gitignore
-/.vscode
-/kuzuu.rs
+**/target
+**/Cargo.lock
+**/test
+**/libs
+**/.gitignore
+**/.vscode
+**/kuzuu.rs
 /ddd

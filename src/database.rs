@@ -52,7 +52,7 @@ impl DatabaseBuilder {
     /// Builds the database instance.
     pub fn build(&self) -> error::Result<Database> {
         let db = Database::new(&self.database_path, self.buffer_pool_size);
-        let _ = Database::set_logging_level(self.log_level)?;
+        Database::set_logging_level(self.log_level)?;
         db
     }
     /// Sets the page buffer pool size for the database.

@@ -2,7 +2,7 @@
 
 KuzuDB-rs is a Rust wrapper for interacting with the [Kuzu graph database](https://kuzudb.com/). It provides a high-level API for connecting to a Kuzu database, executing queries, and managing transactions.
 
-However, this library is not the official Rust wrapper for Kuzu. Please check and use the [official library](https://github.com/kuzudb/kuzu/tree/master/tools/rust_api) .
+## However, this library is not the official Rust wrapper for Kuzu. Please check and use the [official library](https://github.com/kuzudb/kuzu/tree/master/tools/rust_api).
 
 ## Features
 
@@ -53,7 +53,7 @@ fn main() -> Result<(), Error> {
 - [ ] Missing Features
     - [ ] named paramaters
     - [ ] decode structs, lists
-- [ ] Dynamic building & linking
+- [X] Dynamic building & linking
 - [ ] Tests
     - [ ] Unit tests
     - [ ] Integrity tests

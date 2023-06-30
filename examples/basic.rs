@@ -16,10 +16,10 @@ fn create_tables(connection: &mut Connection) -> error::Result<()> {
 }
 
 fn load_data(connection: &mut Connection) -> error::Result<()> {
-    connection.query("COPY User FROM \"../test_data/user.csv\";")?;
-    connection.query("COPY City FROM \"../test_data/city.csv\";")?;
-    connection.query("COPY Follows FROM \"../test_data/follows.csv\";")?;
-    connection.query("COPY LivesIn FROM \"../test_data/lives_in.csv\";")?;
+    connection.query("COPY User FROM \"test_data/user.csv\";")?;
+    connection.query("COPY City FROM \"test_data/city.csv\";")?;
+    connection.query("COPY Follows FROM \"test_data/follows.csv\";")?;
+    connection.query("COPY LivesIn FROM \"test_data/lives_in.csv\";")?;
     Ok(())
 }
 

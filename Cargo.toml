@@ -7,6 +7,10 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1.0.24"
+libkuzudb-sys = { path = "libkuzudb-sys" }
+
+[workspace]
+members = ["libkuzudb-sys"]
 
 [[examples]]
 name = "basic"

@@ -18,9 +18,9 @@ pub mod prepared_statement;
 /// Module defining various types used in the library.
 pub mod types;
 
-#[allow(warnings, unused)]
-/// Module for handling foreign function interfaces (FFI).
-mod ffi;
+// #[allow(warnings, unused)]
+// /// Module for handling foreign function interfaces (FFI).
+pub(crate) use libkuzudb_sys as ffi;
 
 /// Module containing helper functions and types for internal use.
 pub(crate) mod helper;

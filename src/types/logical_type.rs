@@ -104,7 +104,7 @@ impl TryFrom<&PtrContainer<ffi::kuzu_value>> for LogicaType {
     fn try_from(value: &PtrContainer<ffi::kuzu_value>) -> Result<Self, Self::Error> {
         let logical_type =
             PtrContainer(unsafe { ffi::kuzu_value_get_data_type(value.validate()?.0) });
-        Ok(logical_type.validate()?.try_into()?)
+        logical_type.validate()?.try_into()
     }
 }
 

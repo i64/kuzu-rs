@@ -1,0 +1,3 @@
+[submodule "libkuzudb-sys/kuzu"]
+	path = libkuzudb-sys/kuzu
+	url = https://github.com/kuzudb/kuzu/

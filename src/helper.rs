@@ -40,7 +40,7 @@ macro_rules! into_cstr {
     ($inner:expr) => {{
         let _inner = $inner;
         let cstr = ::std::ffi::CString::new(_inner)
-            .map_err(|_| crate::error::Error::CStringEncodeError(_inner.to_owned()))?;
+            .map_err(|_| $crate::error::Error::CStringEncodeError(_inner.to_owned()))?;
 
         Ok(cstr)
     }};

@@ -14,7 +14,6 @@ pub struct Row {
 }
 
 impl Row {
-    
     pub(crate) fn new(keys: Rc<HashMap<String, usize>>, values: Vec<KuzuValue>) -> Self {
         Self { keys, values }
     }
@@ -26,7 +25,6 @@ impl Row {
             .ok_or(error::Error::ColumnNotFound(idx.to_string()))
     }
 
-    
     /// Returns the converted value if it exists, or an `Error::ColumnNotFound`  if the index is out of bounds, or `Error::DecodeError` if the the wrong type is specified.
     pub fn get_val<T: TryFrom<KuzuValue, Error = error::Error>>(
         &self,
