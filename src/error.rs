@@ -1,6 +1,5 @@
 use std::ffi::c_char;
 
-// use std::error::Error as StdError;
 use thiserror::Error;
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -29,5 +28,10 @@ pub enum Error {
     FFIGotNull(&'static str),
 
     #[error("transactions are not allowed in DDL and COPOY statements")]
-    TransactionNotAllowed,
+    TxNotAllowed,
+
+    #[error(
+        "at any point in time, there can be multiple read transactions but one write transaction"
+    )]
+    MultipleWriteTxNotAllowed,
 }

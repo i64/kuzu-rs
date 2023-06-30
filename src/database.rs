@@ -23,7 +23,6 @@ impl LogLevel {
 pub struct DatabaseBuilder {
     database_path: String,
     buffer_pool_size: u64,
-    //     system_config: SystemConfig,
     log_level: LogLevel,
 }
 
@@ -32,7 +31,6 @@ impl DatabaseBuilder {
         Self {
             database_path: database_path.as_ref().to_owned(),
             buffer_pool_size: 0,
-            // system_config: SystemConfig::default(),
             log_level: LogLevel::Error,
         }
     }
@@ -50,17 +48,7 @@ impl DatabaseBuilder {
         self.buffer_pool_size = buffer_pool_size;
         self
     }
-    //     pub fn with_large_page_buffer_pool_size(
-    //         &mut self,
-    //         large_page_buffer_pool_size: u64,
-    //     ) -> &mut Self {
-    //         self.system_config.large_page_buffer_pool_size = large_page_buffer_pool_size;
-    //         self
-    //     }
-    //     pub fn with_max_num_threads(&mut self, max_num_threads: u64) -> &mut Self {
-    //         self.system_config.max_num_threads = max_num_threads;
-    //         self
-    //     }
+
 }
 
 #[repr(C)]

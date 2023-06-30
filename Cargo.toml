@@ -8,5 +8,8 @@ edition = "2021"
 [dependencies]
 thiserror = "1.0.24"
 
-[examples]
-name = "ex1"
+[[examples]]
+name = "basic"
+
+[[examples]]
+name = "transaction"

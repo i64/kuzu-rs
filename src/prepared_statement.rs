@@ -63,7 +63,7 @@ impl<'conn> Statement<'conn> {
             unsafe { ffi::kuzu_prepared_statement_allow_active_transaction(stmt) };
 
         if !allow_active_transaction {
-            return Err(error::Error::TransactionNotAllowed);
+            return Err(error::Error::TxNotAllowed);
         }
 
         Ok(Self {
@@ -92,15 +92,14 @@ impl<'conn> Statement<'conn> {
             Ok(())
         })?;
 
-        let raw_result =
-            unsafe { ffi::kuzu_connection_execute(self.conn.to_inner(), self.stmt.0) };
+        let raw_result = unsafe { ffi::kuzu_connection_execute(self.conn.to_inner(), self.stmt.0) };
         PtrContainer(raw_result).try_into()
     }
 }
 
 impl Connection {
     pub fn prepare<S: AsRef<str>>(&mut self, query: S) -> error::Result<Statement> {
-    let query = query.as_ref();
+        let query = query.as_ref();
         Statement::new(self, query)
     }
 }

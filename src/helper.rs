@@ -28,14 +28,6 @@ pub fn convert_inner_to_owned_string(inner: *const c_char) -> error::Result<Stri
         .to_owned())
 }
 
-// pub fn into_cstr<S: AsRef<str>>(inner: S) -> error::Result<*const c_char> {
-//     let _inner = inner.as_ref();
-//     let cstr = ::std::ffi::CString::new(_inner)
-//         .map_err(|_| crate::error::Error::CStringEncodeError(_inner.to_owned()))?;
-//     Ok(unsafe {cstr.as_ptr()})
-//     // Ok(Box::leak(Box::new(cstr)).as_ptr())
-// }
-
 #[macro_export]
 macro_rules! into_cstr {
     ($inner:expr) => {{
@@ -43,31 +35,6 @@ macro_rules! into_cstr {
         let cstr = ::std::ffi::CString::new(_inner)
             .map_err(|_| crate::error::Error::CStringEncodeError(_inner.to_owned()))?;
 
-        Ok(unsafe { cstr })
+        Ok(cstr)
     }};
 }
-// pub struct CCString {
-//     orig: std::ffi::CString,
-//     raw: Option<*const c_char>,
-// }
-
-// impl CCString {
-//     pub fn as_cstr<S: AsRef<str>>(inner: S) -> error::Result<*const c_char> {
-//         let _inner = inner.as_ref();
-//         let cstr = ::std::ffi::CString::new(_inner)
-//             .map_err(|_| crate::error::Error::CStringEncodeError(_inner.to_owned()))?;
-//         unsafe { cstr.as_ptr() }
-//         // Ok(Box::leak(Box::new(cstr)).as_ptr())
-//     }
-// }
-
-// impl Drop for CCString {
-//     fn drop(&mut self) {
-//         match self.raw.take() {
-//             Some(ptr) if !ptr.is_null() => {
-//                 let _ = unsafe { Box::from_raw(ptr) };
-//             }
-//             None => (),
-//         };
-//     }
-// }
