@@ -2,10 +2,15 @@ use crate::error;
 
 use super::value::{KuzuValue, Node, Relation};
 
+/// Implements the `TryFrom` trait for decoding a `KuzuValue` into a specific type.
 macro_rules! impl_decode {
     ($ty:ty, $inner:ident) => {
         impl TryFrom<KuzuValue> for $ty {
             type Error = error::Error;
+
+            /// Tries to convert a `KuzuValue` into the specified type.
+            /// If the conversion is successful, it returns the inner value.
+            /// Otherwise, it returns a `DecodeError` with the type name of the value.
             fn try_from(value: KuzuValue) -> Result<Self, Self::Error> {
                 match value {
                     KuzuValue::$inner(inner) => Ok(inner),
@@ -32,8 +37,8 @@ impl_decode!(Relation, Rel);
 #[cfg(test)]
 mod tests {
     use super::{KuzuValue, Node, Relation};
-    use crate::types::value::tests::{new_internal_id, new_rel, new_node};
-    use crate::{error};
+    use crate::error;
+    use crate::types::value::tests::{new_internal_id, new_node, new_rel};
     use std::fmt::Debug;
 
     fn test_type<ST, A, B, C, D, E, F, G, I>(wrapped_val: KuzuValue, result: ST)

@@ -2,25 +2,43 @@ use crate::helper::PtrContainer;
 
 use crate::{error, ffi};
 
+/// Represents the logical type ids used in Kuzu.
 #[repr(u32)]
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum LogicalTypeID {
+    /// Represents any logical type.
     Any = 0,
+    /// Represents a node logical type.
     Node = 10,
+    /// Represents a relationship logical type.
     Rel = 11,
+    /// Represents a boolean logical type.
     Bool = 22,
+    /// Represents a 64-bit integer logical type.
     Int64 = 23,
+    /// Represents a 32-bit integer logical type.
     Int32 = 24,
+    /// Represents a 16-bit integer logical type.
     Int16 = 25,
+    /// Represents a double-precision floating-point logical type.
     Double = 26,
+    /// Represents a single-precision floating-point logical type.
     Float = 27,
+    /// Represents a date logical type.
     Date = 28,
+    /// Represents a timestamp logical type.
     Timestamp = 29,
+    /// Represents an interval logical type.
     Interval = 30,
+    /// Represents a fixed list logical type.
     FixedList = 31,
+    /// Represents an internal ID logical type.
     InternalId = 40,
+    /// Represents a string logical type.
     String = 50,
+    /// Represents a variable-length list logical type.
     VarList = 52,
+    /// Represents a struct logical type.
     Struct = 53,
 }
 
@@ -51,19 +69,21 @@ impl TryFrom<u32> for LogicalTypeID {
     }
 }
 
-#[derive(Debug)]
+/// Represents a logical type used in Kuzu.
+#[derive(Debug, PartialEq)]
 pub(crate) struct LogicaType {
+    /// The LogicalTypeID of the LogicaType.
     pub(crate) tid: LogicalTypeID,
+    /// The fixed number of elements in a list.
     pub(crate) fixed_num_elements_in_list: u64,
 }
 
-impl PartialEq for LogicaType {
-    fn eq(&self, other: &Self) -> bool {
-        self.tid == other.tid
-    }
-}
-
 impl LogicaType {
+    /// Creates a new `LogicaType` with the provided logical type ID, inner pointer,
+    /// and fixed number of elements in the list.
+    ///
+    /// Returns a the newly created `LogicaType` if successful, or
+    /// an `Error::FFIGotNull` if the inner pointer is null.
     fn new_with_id(
         tid: LogicalTypeID,
         inner: *mut ffi::kuzu_logical_type,

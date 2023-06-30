@@ -10,19 +10,32 @@ use super::logical_type::{LogicaType, LogicalTypeID};
 
 use crate::ffi;
 
+/// Represents various types of values that can be stored in Kuzu.
 #[derive(Debug, Clone, PartialEq)]
 pub enum KuzuValue {
+    /// Node value.
     Node(Node),
+    /// Relation value.
     Rel(Relation),
+    /// Boolean value.
     Bool(bool),
+    /// 64-bit integer value.
     Int64(i64),
+    /// 32-bit integer value.
     Int32(i32),
+    /// 16-bit integer value.
     Int16(i16),
+    /// Double precision floating-point value.
     Double(f64),
+    /// Single precision floating-point value.
     Float(f32),
+    /// String value.
     String(String),
+    /// Internal ID value.
     InternalId(InternalId),
+    /// Fixed-length list value.
     FixedList(FixedList),
+    /// Variable-length list value.
     VarList(VarList),
     // Date,
     // Timestamp,
@@ -31,6 +44,7 @@ pub enum KuzuValue {
 }
 
 impl KuzuValue {
+    /// Returns the name of the `KuzuValue` variant.
     pub fn name(&self) -> &'static str {
         match self {
             Self::Node(_) => "Self::Node",
@@ -136,10 +150,13 @@ impl TryFrom<&KuzuValue> for PtrContainer<ffi::kuzu_value> {
     }
 }
 
+/// Represents an internal ID in Kuzu.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InternalId {
-    offset: usize,
-    table_id: usize,
+    /// Offset value.
+    pub offset: usize,
+    /// Table ID value.
+    pub table_id: usize,
 }
 
 impl From<ffi::kuzu_internal_id_t> for InternalId {
@@ -151,10 +168,14 @@ impl From<ffi::kuzu_internal_id_t> for InternalId {
     }
 }
 
+/// Represents a node in Kuzu.
 #[derive(Debug, Clone)]
 pub struct Node {
+    /// The ID of the node.
     id: InternalId,
+    /// The label of the node.
     label: String,
+    /// The properties of the node.
     properties: HashMap<String, KuzuValue>,
 }
 
@@ -212,11 +233,16 @@ impl PartialEq for Node {
     }
 }
 
+/// Represents a relation in Kuzu.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Relation {
+    /// The label of the relation.
     label: String,
+    /// The source node ID of the relation.
     src: InternalId,
+    /// The destination node ID of the relation.
     dst: InternalId,
+    /// The properties of the relation.
     properties: HashMap<String, KuzuValue>,
 }
 
@@ -269,14 +295,17 @@ impl TryFrom<PtrContainer<ffi::kuzu_rel_val>> for Relation {
     }
 }
 
-
+/// Represents a fixed list of values in Kuzu.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixedList {
+    /// The inner vector of Kuzu values.
     inner: Vec<KuzuValue>,
 }
 
+/// Represents a variable-length list of values in Kuzu.
 #[derive(Debug, Clone, PartialEq)]
 pub struct VarList {
+    /// The inner vector of Kuzu values.
     inner: Vec<KuzuValue>,
 }
 

@@ -8,11 +8,18 @@ use crate::{error, ffi, into_cstr};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
+/// Represents an argument for a prepared statement.
 struct Argument(KuzuValue);
+
+/// Represents a prepared statement in Kuzu
 pub struct Statement<'conn> {
+    /// The database connection associated with the statement.
     conn: &'conn connection::Connection,
+    /// Pointer container for the underlying FFI prepared statement.
     stmt: PtrContainer<ffi::kuzu_prepared_statement>,
+    /// CString representation of the statement.
     _stmt: CString,
+    /// Arguments for the prepared statement.
     args: Vec<Argument>,
 }
 
@@ -26,6 +33,7 @@ macro_rules! static_cstr {
     };
 }
 
+// Lookup table for static CStrings used for parameter names in prepared statements.
 static STMT_LOOKUP: [&CStr; 256] = static_cstr![
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
@@ -43,6 +51,8 @@ static STMT_LOOKUP: [&CStr; 256] = static_cstr![
 ];
 
 impl<'conn> Statement<'conn> {
+    /// Creates a new instance of `Statement`.
+    /// Returns an error if there is an issue preparing the statement or retrieving the result.
     fn new(conn: &'conn Connection, query: &str) -> error::Result<Self> {
         let cstring = into_cstr!(query)?;
         let stmt = unsafe { ffi::kuzu_connection_prepare(conn.to_inner(), cstring.as_ptr()) };
@@ -74,12 +84,15 @@ impl<'conn> Statement<'conn> {
         })
     }
 
+    /// Binds a value to a parameter in the prepared statement.
     pub fn bind<V: Into<KuzuValue>>(&mut self, v: V) -> &mut Self {
         let val = v.into();
         self.args.push(Argument(val));
         self
     }
 
+    /// Executes the prepared statement.
+    /// Returns an error if there is an issue executing the statement or retrieving the result.
     pub fn execute(&self) -> error::Result<QueryResult> {
         self.args.iter().enumerate().try_for_each(|(idx, arg)| {
             let val = PtrContainer::try_from(&arg.0)?;
@@ -98,6 +111,8 @@ impl<'conn> Statement<'conn> {
 }
 
 impl Connection {
+    /// Prepares a Kuzu query statement for execution.
+    /// Returns an error if there is an issue preparing the statement or retrieving the result.
     pub fn prepare<S: AsRef<str>>(&mut self, query: S) -> error::Result<Statement> {
         let query = query.as_ref();
         Statement::new(self, query)

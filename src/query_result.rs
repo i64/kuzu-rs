@@ -10,7 +10,8 @@ use crate::{
 
 use crate::ffi;
 
-pub struct QueryResult(*mut ffi::kuzu_query_result);
+/// Represents the result of a query execution in Kuzu.
+pub struct QueryResult(PtrContainer<ffi::kuzu_query_result>);
 
 impl TryFrom<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
     type Error = error::Error;
@@ -25,19 +26,24 @@ impl TryFrom<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
             return Err(error::Error::QueryResultError(s));
         }
 
-        Ok(Self(value.0))
+        Ok(Self(value))
     }
 }
 
 impl QueryResult {
-    pub fn iter<R: From<Row>>(&self) -> error::Result<Iter<R>> {
-        let len = unsafe { ffi::kuzu_query_result_get_num_tuples(self.0) } as usize;
-        let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0) };
+    /// Returns an iterator over the rows of the query result.
+    ///
+    /// Each iteration produces a `TryFrom<Row>` object, which represents a single row of the result set.
+    ///
+    /// Returns an error if there is an issue retrieving the rows from the query result.
+    pub fn iter<R: TryFrom<Row>>(&self) -> error::Result<Iter<R>> {
+        let len = unsafe { ffi::kuzu_query_result_get_num_tuples(self.0 .0) } as usize;
+        let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0 .0) };
 
         let columns = (0..column_len)
             .map(|idx| {
                 convert_inner_to_owned_string(unsafe {
-                    ffi::kuzu_query_result_get_column_name(self.0, idx)
+                    ffi::kuzu_query_result_get_column_name(self.0 .0, idx)
                 })
                 .map(|res| (res, idx as usize))
             })
@@ -54,11 +60,12 @@ impl QueryResult {
 
 impl Drop for QueryResult {
     fn drop(&mut self) {
-        unsafe { ffi::kuzu_query_result_destroy(self.0) }
+        unsafe { ffi::kuzu_query_result_destroy(self.0 .0) }
     }
 }
 
-pub struct Iter<'qr, R: From<Row>> {
+/// Iterator over the rows of a query result.
+pub struct Iter<'qr, R: TryFrom<Row>> {
     inner: &'qr QueryResult,
     columns: Rc<HashMap<String, usize>>,
     len: usize,
@@ -67,17 +74,17 @@ pub struct Iter<'qr, R: From<Row>> {
 
 impl<'a, R> Iterator for Iter<'a, R>
 where
-    R: From<Row>,
+    R: TryFrom<Row>,
 {
     type Item = R;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let has_next = unsafe { ffi::kuzu_query_result_has_next(self.inner.0) };
+        let has_next = unsafe { ffi::kuzu_query_result_has_next(self.inner.0 .0) };
         if !has_next {
             return None;
         }
 
-        let _row = unsafe { ffi::kuzu_query_result_get_next(self.inner.0) };
+        let _row = unsafe { ffi::kuzu_query_result_get_next(self.inner.0 .0) };
         if _row.is_null() {
             return None;
         }
@@ -92,7 +99,7 @@ where
 
         let row = Row::new(Rc::clone(&self.columns), values);
         self.len -= 1;
-        Some(Self::Item::from(row))
+        Self::Item::try_from(row).ok()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -101,6 +108,8 @@ where
 }
 
 impl Connection {
+    /// Executes a query on the connection and returns the query result.
+    /// Returns an error if there is an issue executing the query or retrieving the query result.
     pub fn query<S: AsRef<str>>(&self, query: S) -> error::Result<QueryResult> {
         let cst = into_cstr!(query.as_ref())?;
         let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst.as_ptr()) };
