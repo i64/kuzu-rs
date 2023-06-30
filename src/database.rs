@@ -48,7 +48,6 @@ impl DatabaseBuilder {
         self.buffer_pool_size = buffer_pool_size;
         self
     }
-
 }
 
 #[repr(C)]

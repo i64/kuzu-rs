@@ -10,7 +10,7 @@ use super::logical_type::{LogicaType, LogicalTypeID};
 
 use crate::ffi;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum KuzuValue {
     Node(Node),
     Rel(Relation),
@@ -136,17 +136,17 @@ impl TryFrom<&KuzuValue> for PtrContainer<ffi::kuzu_value> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InternalId {
-    offset: u64,
-    table_id: u64,
+    offset: usize,
+    table_id: usize,
 }
 
 impl From<ffi::kuzu_internal_id_t> for InternalId {
     fn from(value: ffi::kuzu_internal_id_t) -> Self {
         Self {
-            offset: value.offset,
-            table_id: value.table_id,
+            offset: value.offset as usize,
+            table_id: value.table_id as usize,
         }
     }
 }
@@ -206,7 +206,13 @@ impl TryFrom<PtrContainer<ffi::kuzu_node_val>> for Node {
     }
 }
 
-#[derive(Debug, Clone)]
+impl PartialEq for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Relation {
     label: String,
     src: InternalId,
@@ -262,12 +268,42 @@ impl TryFrom<PtrContainer<ffi::kuzu_rel_val>> for Relation {
         })
     }
 }
-#[derive(Debug, Clone)]
+
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FixedList {
     inner: Vec<KuzuValue>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VarList {
     inner: Vec<KuzuValue>,
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::{FixedList, InternalId, Node, Relation};
+
+    pub fn new_internal_id(offset: usize, table_id: usize) -> InternalId {
+        InternalId { offset, table_id }
+    }
+
+    pub fn new_node(offset: usize, table_id: usize) -> Node {
+        Node {
+            id: new_internal_id(offset, table_id),
+            label: Default::default(),
+            properties: Default::default(),
+        }
+    }
+
+    pub fn new_rel() -> Relation {
+        let src = new_internal_id(0, 0);
+        let dst = new_internal_id(1, 1);
+        Relation {
+            src,
+            dst,
+            label: Default::default(),
+            properties: Default::default(),
+        }
+    }
 }
