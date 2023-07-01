@@ -14,6 +14,7 @@ pub struct PtrContainer<T: ?Sized>(pub *mut T);
 impl<T: ?Sized> PtrContainer<T> {
     /// Validates the pointer and returns `Self` if it is not null.
     /// Returns an error of type `Error::FFIGotNull` if the pointer is null.
+    #[inline]
     pub fn validate(self) -> error::Result<Self> {
         match self.0.is_null() {
             true => Err(error::Error::FFIGotNull(std::any::type_name::<Self>())),
@@ -48,5 +49,5 @@ macro_rules! into_cstr {
 
 pub(crate) enum CCow {
     Static(&'static CStr),
-    Owned(CString),
+    Owned(CString)
 }

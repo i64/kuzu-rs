@@ -23,10 +23,9 @@ fn update_data(tx: &mut Transaction) -> kuzu_rs::error::Result<()> {
 }
 
 fn print_data(tx: &mut Transaction) -> kuzu_rs::error::Result<()> {
-    let res = tx
-        .query(
-            "MATCH (u:User) WHERE u.name = 'Alice' OR u.name = 'Bob' RETURN u.name, u.balance",
-        )?;
+    let res = tx.query(
+        "MATCH (u:User) WHERE u.name = 'Alice' OR u.name = 'Bob' RETURN u.name, u.balance",
+    )?;
 
     for r in res.iter::<Row>()? {
         let name: String = r.get_val_by_column("u.name")?;

@@ -17,7 +17,8 @@ impl TryFrom<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
     type Error = error::Error;
 
     fn try_from(value: PtrContainer<ffi::kuzu_query_result>) -> Result<Self, Self::Error> {
-        let is_success = unsafe { ffi::kuzu_query_result_is_success(value.validate()?.0) };
+        let value = value.validate()?;
+        let is_success = unsafe { ffi::kuzu_query_result_is_success(value.0) };
 
         if !is_success {
             let s = convert_inner_to_owned_string(unsafe {

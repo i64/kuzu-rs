@@ -100,9 +100,12 @@ impl TryFrom<PtrContainer<ffi::kuzu_value>> for KuzuValue {
                         PtrContainer(unsafe { ffi::kuzu_value_get_list_element(value.0, idx) })
                             .try_into()
                     })
-                    .collect::<Result<_, _>>()?;
-
-                KuzuValue::FixedList(FixedList { inner: elems })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let elems_len = elems.len();
+                KuzuValue::FixedList(FixedList {
+                    inner: elems,
+                    len: elems_len
+                })
             }
             LogicalTypeID::VarList => {
                 let list_size = unsafe { ffi::kuzu_value_get_list_size(value.0) };
@@ -172,11 +175,11 @@ impl From<ffi::kuzu_internal_id_t> for InternalId {
 #[derive(Debug, Clone)]
 pub struct Node {
     /// The ID of the node.
-    id: InternalId,
+    pub id: InternalId,
     /// The label of the node.
-    label: String,
+    pub label: String,
     /// The properties of the node.
-    properties: HashMap<String, KuzuValue>,
+    pub properties: HashMap<String, KuzuValue>,
 }
 
 impl TryFrom<PtrContainer<ffi::kuzu_node_val>> for Node {
@@ -299,14 +302,17 @@ impl TryFrom<PtrContainer<ffi::kuzu_rel_val>> for Relation {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixedList {
     /// The inner vector of Kuzu values.
-    inner: Vec<KuzuValue>,
+    pub inner: Vec<KuzuValue>,
+
+    /// The length of the inner list
+    pub len: usize,
 }
 
 /// Represents a variable-length list of values in Kuzu.
 #[derive(Debug, Clone, PartialEq)]
 pub struct VarList {
     /// The inner vector of Kuzu values.
-    inner: Vec<KuzuValue>,
+    pub inner: Vec<KuzuValue>,
 }
 
 #[cfg(test)]

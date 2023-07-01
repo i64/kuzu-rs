@@ -7,39 +7,39 @@ use crate::{error, ffi};
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum LogicalTypeID {
     /// Represents any logical type.
-    Any = 0,
+    Any = ffi::kuzu_data_type_id_KUZU_ANY,
     /// Represents a node logical type.
-    Node = 10,
+    Node = ffi::kuzu_data_type_id_KUZU_NODE,
     /// Represents a relationship logical type.
-    Rel = 11,
+    Rel = ffi::kuzu_data_type_id_KUZU_REL,
     /// Represents a boolean logical type.
-    Bool = 22,
+    Bool = ffi::kuzu_data_type_id_KUZU_BOOL,
     /// Represents a 64-bit integer logical type.
-    Int64 = 23,
+    Int64 = ffi::kuzu_data_type_id_KUZU_INT64,
     /// Represents a 32-bit integer logical type.
-    Int32 = 24,
+    Int32 = ffi::kuzu_data_type_id_KUZU_INT32,
     /// Represents a 16-bit integer logical type.
-    Int16 = 25,
+    Int16 = ffi::kuzu_data_type_id_KUZU_INT16,
     /// Represents a double-precision floating-point logical type.
-    Double = 26,
+    Double = ffi::kuzu_data_type_id_KUZU_DOUBLE,
     /// Represents a single-precision floating-point logical type.
-    Float = 27,
+    Float = ffi::kuzu_data_type_id_KUZU_FLOAT,
     /// Represents a date logical type.
-    Date = 28,
+    Date = ffi::kuzu_data_type_id_KUZU_DATE,
     /// Represents a timestamp logical type.
-    Timestamp = 29,
+    Timestamp = ffi::kuzu_data_type_id_KUZU_TIMESTAMP,
     /// Represents an interval logical type.
-    Interval = 30,
+    Interval = ffi::kuzu_data_type_id_KUZU_INTERVAL,
     /// Represents a fixed list logical type.
-    FixedList = 31,
+    FixedList = ffi::kuzu_data_type_id_KUZU_FIXED_LIST,
     /// Represents an internal ID logical type.
-    InternalId = 40,
+    InternalId = ffi::kuzu_data_type_id_KUZU_INTERNAL_ID,
     /// Represents a string logical type.
-    String = 50,
+    String = ffi::kuzu_data_type_id_KUZU_STRING,
     /// Represents a variable-length list logical type.
-    VarList = 52,
+    VarList = ffi::kuzu_data_type_id_KUZU_VAR_LIST,
     /// Represents a struct logical type.
-    Struct = 53,
+    Struct = ffi::kuzu_data_type_id_KUZU_STRUCT,
 }
 
 impl TryFrom<u32> for LogicalTypeID {
@@ -102,8 +102,11 @@ impl LogicaType {
 impl TryFrom<&PtrContainer<ffi::kuzu_value>> for LogicaType {
     type Error = error::Error;
     fn try_from(value: &PtrContainer<ffi::kuzu_value>) -> Result<Self, Self::Error> {
+        if value.0.is_null() {
+            return Err(error::Error::FFIGotNull("LogicalType"));
+        }
         let logical_type =
-            PtrContainer(unsafe { ffi::kuzu_value_get_data_type(value.validate()?.0) });
+            PtrContainer(unsafe { ffi::kuzu_value_get_data_type(value.0) });
         logical_type.validate()?.try_into()
     }
 }
@@ -111,8 +114,9 @@ impl TryFrom<&PtrContainer<ffi::kuzu_value>> for LogicaType {
 impl TryFrom<PtrContainer<ffi::kuzu_logical_type>> for LogicaType {
     type Error = error::Error;
     fn try_from(value: PtrContainer<ffi::kuzu_logical_type>) -> Result<Self, Self::Error> {
+        let value = value.validate()?;
         let tid = {
-            let _tid = unsafe { ffi::kuzu_data_type_get_id(value.validate()?.0) };
+            let _tid = unsafe { ffi::kuzu_data_type_get_id(value.0) };
             LogicalTypeID::try_from(_tid)?
         };
 
