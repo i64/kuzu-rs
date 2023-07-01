@@ -1,22 +1,13 @@
 use std::{path::Path, process::Command};
 
 const CMAKE_NAME: &'static str = "CMakeLists.txt";
-const CMAKE_NAME: &'static str = "tools";
+const TOOLS_NAME: &'static str = "tools";
 const SIMPLIFIED_CMAKE_NAME: &'static str = "simplified_cmake.txt";
-
-fn get_profile() -> &'static str {
-    let profile = std::env::var("PROFILE").unwrap();
-    match profile.as_str() {
-        "debug" => "debug",
-        "release" => "release",
-        _ => unreachable!(),
-    }
-}
 
 fn link(kuzu_path: &Path, profile: &str) {
     let binding = std::fs::canonicalize(kuzu_path).unwrap();
     let kuzu_display_path = binding.display();
-    
+
     println!("cargo:rustc-link-lib=static=kuzu");
     println!("cargo:rustc-link-lib=static=antlr4_cypher");
     println!("cargo:rustc-link-lib=static=antlr4_runtime");
@@ -34,9 +25,13 @@ fn link(kuzu_path: &Path, profile: &str) {
     println!("cargo:rustc-link-search=native={kuzu_display_path}/build/{profile}/third_party/antlr4_cypher/");
     println!("cargo:rustc-link-search=native={kuzu_display_path}/build/{profile}/third_party/antlr4_runtime/");
 
-    println!("cargo:rustc-link-search=native={kuzu_display_path}/external/build/arrow/install/lib/");
+    println!(
+        "cargo:rustc-link-search=native={kuzu_display_path}/external/build/arrow/install/lib/"
+    );
 
-    println!("cargo:rustc-link-search=native={kuzu_display_path}/build/{profile}/third_party/utf8proc/");
+    println!(
+        "cargo:rustc-link-search=native={kuzu_display_path}/build/{profile}/third_party/utf8proc/"
+    );
     println!("cargo:rustc-link-search=native={kuzu_display_path}/build/{profile}/third_party/re2/");
 }
 
@@ -64,12 +59,12 @@ fn run_make(kuzu_path: &Path, profile: &str) {
     std::env::set_current_dir(current_dir).unwrap();
 }
 
-fn main() {    
+fn main() {
     let kuzu_path = Path::new("./kuzu/");
     let profile = "release"; // get_profile();
 
     println!("cargo:rerun-if-changed=build.rs");
-    
+
     assert!(kuzu_path.exists());
     assert!(kuzu_path.is_dir());
 
