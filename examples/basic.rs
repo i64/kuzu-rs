@@ -25,8 +25,8 @@ fn load_data(connection: &mut Connection) -> error::Result<()> {
 
 fn perform_query(connection: &mut Connection) -> error::Result<()> {
     let res = connection
-        .prepare("MATCH (a:User)<-[e:Follows]-(b:User) WHERE a.age > $1 RETURN a, e, b")?
-        .bind(1i64)
+        .prepare("MATCH (a:User)<-[e:Follows]-(b:User) WHERE a.age > $age RETURN a, e, b")?
+        .bind("age", 40i64)?
         .execute()?;
 
     for r in res.iter::<Row>()? {

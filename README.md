@@ -51,7 +51,7 @@ fn main() -> Result<(), Error> {
 
 ## TODO
 - [ ] Missing Features
-    - [ ] named paramaters
+    - [X] named paramaters
     - [ ] decode structs, lists
 - [X] Dynamic building & linking
 - [ ] Tests

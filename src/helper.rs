@@ -1,4 +1,4 @@
-use std::ffi::c_char;
+use std::ffi::{c_char, CStr, CString};
 
 use crate::error;
 
@@ -44,4 +44,9 @@ macro_rules! into_cstr {
 
         Ok(cstr)
     }};
+}
+
+pub(crate) enum CCow {
+    Static(&'static CStr),
+    Owned(CString),
 }
