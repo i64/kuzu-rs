@@ -1,8 +1,8 @@
 use std::{path::Path, process::Command};
 
-const CMAKE_NAME: &'static str = "CMakeLists.txt";
-const TOOLS_NAME: &'static str = "tools";
-const SIMPLIFIED_CMAKE_NAME: &'static str = "simplified_cmake.txt";
+const CMAKE_NAME: &str = "CMakeLists.txt";
+const TOOLS_NAME: &str = "tools";
+const SIMPLIFIED_CMAKE_NAME: &str = "simplified_cmake.txt";
 
 fn link(kuzu_path: &Path, profile: &str) {
     let binding = std::fs::canonicalize(kuzu_path).unwrap();
@@ -43,7 +43,7 @@ fn overwrite_cmake(kuzu_path: &Path) {
     assert!(cmake_path.exists());
     assert!(simplified.exists());
     let _ = std::fs::remove_file(&cmake_path);
-    let _ = std::fs::remove_dir(&tools_path);
+    let _ = std::fs::remove_dir(tools_path);
 
     assert!(std::fs::copy(simplified, &cmake_path).is_ok())
 }

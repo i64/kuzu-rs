@@ -95,7 +95,7 @@ impl<'conn> Statement<'conn> {
     /// Executes the prepared statement.
     /// Returns an error if there is an issue executing the statement or retrieving the result.
     pub fn execute(&self) -> error::Result<QueryResult> {
-        self.args.iter().enumerate().try_for_each(|(idx, arg)| {
+        self.args.iter().try_for_each(|arg| {
             let Argument(_key, _val) = arg;
 
             let key = match _key {
