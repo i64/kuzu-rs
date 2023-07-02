@@ -1158,7 +1158,8 @@ extern "C" {
     /// # Arguments
     ///
     /// * `rel_val` - The rel value to return.
-    pub fn kuzu_rel_val_get_label_name(rel_val: *mut kuzu_rel_val) -> *const ::std::os::raw::c_char;
+    pub fn kuzu_rel_val_get_label_name(rel_val: *mut kuzu_rel_val)
+        -> *const ::std::os::raw::c_char;
 
     /// Returns the number of properties of the given rel value.
     ///

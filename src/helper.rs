@@ -49,5 +49,5 @@ macro_rules! into_cstr {
 
 pub(crate) enum CCow {
     Static(&'static CStr),
-    Owned(CString)
+    Owned(CString),
 }

@@ -101,11 +101,7 @@ impl TryFrom<PtrContainer<ffi::kuzu_value>> for KuzuValue {
                             .try_into()
                     })
                     .collect::<Result<Vec<_>, _>>()?;
-                let elems_len = elems.len();
-                KuzuValue::FixedList(FixedList {
-                    inner: elems,
-                    len: elems_len
-                })
+                KuzuValue::FixedList(FixedList::try_new(elems)?)
             }
             LogicalTypeID::VarList => {
                 let list_size = unsafe { ffi::kuzu_value_get_list_size(value.0) };
@@ -116,7 +112,7 @@ impl TryFrom<PtrContainer<ffi::kuzu_value>> for KuzuValue {
                     })
                     .collect::<Result<_, _>>()?;
 
-                KuzuValue::VarList(VarList { inner: elems })
+                KuzuValue::VarList(VarList::try_new(elems)?)
             }
             // LogicalTypeID::Date => todo!(),
             // LogicalTypeID::Timestamp => todo!(),
@@ -308,6 +304,26 @@ pub struct FixedList {
     pub len: usize,
 }
 
+impl FixedList {
+    #[inline]
+    fn try_new(inner: Vec<KuzuValue>) -> error::Result<Self> {
+        if let Some(first_elem) = inner.get(0) {
+            let first_elems_type = std::mem::discriminant(first_elem);
+            let is_all_same = inner
+                .iter()
+                .all(|v| std::mem::discriminant(v) == first_elems_type);
+
+            if !is_all_same {
+                return Err(error::Error::ListTypeError);
+            }
+        }
+
+        let len = inner.len();
+
+        Ok(Self { inner, len })
+    }
+}
+
 /// Represents a variable-length list of values in Kuzu.
 #[derive(Debug, Clone, PartialEq)]
 pub struct VarList {
@@ -315,9 +331,26 @@ pub struct VarList {
     pub inner: Vec<KuzuValue>,
 }
 
+impl VarList {
+    #[inline]
+    fn try_new(inner: Vec<KuzuValue>) -> error::Result<Self> {
+        if let Some(first_elem) = inner.get(0) {
+            let first_elems_type = std::mem::discriminant(first_elem);
+            let is_all_same = inner
+                .iter()
+                .all(|v| std::mem::discriminant(v) == first_elems_type);
+
+            if !is_all_same {
+                return Err(error::Error::ListTypeError);
+            }
+        }
+
+        Ok(Self { inner })
+    }
+}
 #[cfg(test)]
 pub mod tests {
-    use super::{FixedList, InternalId, Node, Relation};
+    use super::{FixedList, InternalId, Node, Relation, VarList};
 
     pub fn new_internal_id(offset: usize, table_id: usize) -> InternalId {
         InternalId { offset, table_id }
@@ -339,6 +372,19 @@ pub mod tests {
             dst,
             label: Default::default(),
             properties: Default::default(),
+        }
+    }
+
+    pub fn new_varlist() -> VarList {
+        VarList {
+            inner: Default::default(),
+        }
+    }
+
+    pub fn new_fixedlist() -> FixedList {
+        FixedList {
+            inner: Default::default(),
+            len: 0,
         }
     }
 }

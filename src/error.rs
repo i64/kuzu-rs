@@ -43,4 +43,8 @@ pub enum Error {
         "At any point in time, there can be multiple read transactions but one write transaction"
     )]
     MultipleWriteTxNotAllowed,
+
+    /// Error indicating that a list can only have one type inside it.
+    #[error("A list can only have one type inside it")]
+    ListTypeError,
 }

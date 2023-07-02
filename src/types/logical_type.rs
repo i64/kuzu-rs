@@ -105,8 +105,7 @@ impl TryFrom<&PtrContainer<ffi::kuzu_value>> for LogicaType {
         if value.0.is_null() {
             return Err(error::Error::FFIGotNull("LogicalType"));
         }
-        let logical_type =
-            PtrContainer(unsafe { ffi::kuzu_value_get_data_type(value.0) });
+        let logical_type = PtrContainer(unsafe { ffi::kuzu_value_get_data_type(value.0) });
         logical_type.validate()?.try_into()
     }
 }
