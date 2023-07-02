@@ -17,7 +17,7 @@ impl TryFrom<PtrContainer<ffi::kuzu_query_result>> for QueryResult {
     type Error = error::Error;
 
     fn try_from(value: PtrContainer<ffi::kuzu_query_result>) -> Result<Self, Self::Error> {
-        let value = value.validate()?;
+        let value = value;
         let is_success = unsafe { ffi::kuzu_query_result_is_success(value.0) };
 
         if !is_success {
@@ -93,7 +93,7 @@ where
         let values: Vec<KuzuValue> = (0..self.columns.len())
             .map(|idx| {
                 let inner = unsafe { ffi::kuzu_flat_tuple_get_value(_row, idx as u64) };
-                PtrContainer(inner).try_into()
+                PtrContainer::try_new(inner)?.try_into()
             })
             .collect::<Result<_, _>>()
             .ok()?;
@@ -114,6 +114,6 @@ impl Connection {
     pub fn query<S: AsRef<str>>(&self, query: S) -> error::Result<QueryResult> {
         let cst = into_cstr!(query.as_ref())?;
         let raw_result = unsafe { ffi::kuzu_connection_query(self.to_inner(), cst.as_ptr()) };
-        PtrContainer(raw_result).try_into()
+        PtrContainer::try_new(raw_result)?.try_into()
     }
 }

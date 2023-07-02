@@ -20,9 +20,9 @@ impl Connection {
     /// Creates a new connection to the specified database.
     pub fn new(database: &mut database::Database) -> error::Result<Self> {
         unsafe {
-            let this = PtrContainer(ffi::kuzu_connection_init(database.0));
+            let this = PtrContainer::try_new(ffi::kuzu_connection_init(database.0))?;
             Ok(Self {
-                inner: RefCell::new(this.validate()?),
+                inner: RefCell::new(this),
                 tx_stats: TransactionStats::default(),
             })
         }

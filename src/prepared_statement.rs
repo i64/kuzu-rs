@@ -77,7 +77,7 @@ impl<'conn> Statement<'conn> {
 
         Ok(Self {
             conn,
-            stmt: PtrContainer(stmt),
+            stmt: PtrContainer::try_new(stmt)?,
             _stmt: cstring,
             args: vec![],
         })
@@ -112,7 +112,7 @@ impl<'conn> Statement<'conn> {
         })?;
 
         let raw_result = unsafe { ffi::kuzu_connection_execute(self.conn.to_inner(), self.stmt.0) };
-        PtrContainer(raw_result).try_into()
+        PtrContainer::try_new(raw_result)?.try_into()
     }
 }
 

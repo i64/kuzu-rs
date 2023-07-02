@@ -4,7 +4,7 @@ use crate::into_cstr;
 use crate::error;
 
 /// Represents different log levels.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum LogLevel {
     /// Informational log level.
     Info,
@@ -52,7 +52,7 @@ impl DatabaseBuilder {
     /// Builds the database instance.
     pub fn build(&self) -> error::Result<Database> {
         let db = Database::new(&self.database_path, self.buffer_pool_size);
-        Database::set_logging_level(self.log_level)?;
+        Database::set_logging_level(&self.log_level)?;
         db
     }
     /// Sets the page buffer pool size for the database.
@@ -78,7 +78,7 @@ impl Database {
         Ok(Self(this))
     }
     /// Sets the logging level for the database.
-    pub fn set_logging_level(log_level: LogLevel) -> error::Result<()> {
+    pub fn set_logging_level(log_level: &LogLevel) -> error::Result<()> {
         let cstring_log_level = into_cstr!(log_level.as_str())?;
         unsafe { ffi::kuzu_database_set_logging_level(cstring_log_level.as_ptr()) };
         Ok(())

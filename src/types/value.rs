@@ -83,11 +83,12 @@ impl TryFrom<PtrContainer<ffi::kuzu_value>> for KuzuValue {
             }
             LogicalTypeID::Node => {
                 let rel_val: PtrContainer<ffi::kuzu_node_val> =
-                    PtrContainer(unsafe { ffi::kuzu_value_get_node_val(value.0) });
+                    PtrContainer::try_new(unsafe { ffi::kuzu_value_get_node_val(value.0) })?;
                 KuzuValue::Node(rel_val.try_into()?)
             }
             LogicalTypeID::Rel => {
-                let rel_val = PtrContainer(unsafe { ffi::kuzu_value_get_rel_val(value.0) });
+                let rel_val =
+                    PtrContainer::try_new(unsafe { ffi::kuzu_value_get_rel_val(value.0) })?;
                 KuzuValue::Rel(rel_val.try_into()?)
             }
             LogicalTypeID::InternalId => {
@@ -97,8 +98,10 @@ impl TryFrom<PtrContainer<ffi::kuzu_value>> for KuzuValue {
             LogicalTypeID::FixedList => {
                 let elems = (0..(logical_type.fixed_num_elements_in_list))
                     .map(|idx| {
-                        PtrContainer(unsafe { ffi::kuzu_value_get_list_element(value.0, idx) })
-                            .try_into()
+                        PtrContainer::try_new(unsafe {
+                            ffi::kuzu_value_get_list_element(value.0, idx)
+                        })
+                        .and_then(|ptr| ptr.try_into())
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 KuzuValue::FixedList(FixedList::try_new(elems)?)
@@ -107,8 +110,10 @@ impl TryFrom<PtrContainer<ffi::kuzu_value>> for KuzuValue {
                 let list_size = unsafe { ffi::kuzu_value_get_list_size(value.0) };
                 let elems: Vec<KuzuValue> = (0..list_size)
                     .map(|idx| {
-                        PtrContainer(unsafe { ffi::kuzu_value_get_list_element(value.0, idx) })
-                            .try_into()
+                        PtrContainer::try_new(unsafe {
+                            ffi::kuzu_value_get_list_element(value.0, idx)
+                        })
+                        .and_then(|ptr| ptr.try_into())
                     })
                     .collect::<Result<_, _>>()?;
 
@@ -145,7 +150,7 @@ impl TryFrom<&KuzuValue> for PtrContainer<ffi::kuzu_value> {
                 _ => todo!(),
             }
         };
-        Ok(PtrContainer(res))
+        PtrContainer::try_new(res)
     }
 }
 
@@ -205,7 +210,7 @@ impl TryFrom<PtrContainer<ffi::kuzu_node_val>> for Node {
 
                     let _val = {
                         let val = unsafe { ffi::kuzu_node_val_get_property_value_at(value.0, idx) };
-                        KuzuValue::try_from(PtrContainer(val))
+                        KuzuValue::try_from(PtrContainer::try_new(val)?)
                     };
 
                     let val = match _val {
@@ -272,7 +277,7 @@ impl TryFrom<PtrContainer<ffi::kuzu_rel_val>> for Relation {
 
                     let _val = {
                         let val = unsafe { ffi::kuzu_rel_val_get_property_value_at(value.0, idx) };
-                        KuzuValue::try_from(PtrContainer(val))
+                        KuzuValue::try_from(PtrContainer::try_new(val)?)
                     };
 
                     let val = match _val {

@@ -4,7 +4,7 @@ use crate::{error, ffi};
 
 /// Represents the logical type ids used in Kuzu.
 #[repr(u32)]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq)]
 pub enum LogicalTypeID {
     /// Represents any logical type.
     Any = ffi::kuzu_data_type_id_KUZU_ANY,
@@ -105,15 +105,16 @@ impl TryFrom<&PtrContainer<ffi::kuzu_value>> for LogicaType {
         if value.0.is_null() {
             return Err(error::Error::FFIGotNull("LogicalType"));
         }
-        let logical_type = PtrContainer(unsafe { ffi::kuzu_value_get_data_type(value.0) });
-        logical_type.validate()?.try_into()
+        let logical_type =
+            PtrContainer::try_new(unsafe { ffi::kuzu_value_get_data_type(value.0) })?;
+        logical_type.try_into()
     }
 }
 
 impl TryFrom<PtrContainer<ffi::kuzu_logical_type>> for LogicaType {
     type Error = error::Error;
     fn try_from(value: PtrContainer<ffi::kuzu_logical_type>) -> Result<Self, Self::Error> {
-        let value = value.validate()?;
+        let value = value;
         let tid = {
             let _tid = unsafe { ffi::kuzu_data_type_get_id(value.0) };
             LogicalTypeID::try_from(_tid)?

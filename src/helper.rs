@@ -8,17 +8,17 @@ use crate::error;
 /// to check if the pointer is null. If the pointer is null, it returns an `Error::FFIGotNull` with an
 /// appropriate error message. Otherwise, it returns the original `PtrContainer`.
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PtrContainer<T: ?Sized>(pub *mut T);
 
 impl<T: ?Sized> PtrContainer<T> {
-    /// Validates the pointer and returns `Self` if it is not null.
+    /// Validates the pointer and creates a `PtrContainer` if it is not null.
     /// Returns an error of type `Error::FFIGotNull` if the pointer is null.
     #[inline]
-    pub fn validate(self) -> error::Result<Self> {
-        match self.0.is_null() {
+    pub fn try_new(ptr: *mut T) -> error::Result<Self> {
+        match ptr.is_null() {
             true => Err(error::Error::FFIGotNull(std::any::type_name::<Self>())),
-            false => Ok(self),
+            false => Ok(Self(ptr)),
         }
     }
 }

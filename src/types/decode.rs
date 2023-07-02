@@ -171,6 +171,5 @@ mod tests {
             KuzuValue::VarList(varlist.clone()),
             varlist.clone(),
         );
-        
     }
 }
