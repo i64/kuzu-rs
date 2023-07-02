@@ -1,10 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{
-    error,
-    helper::{convert_inner_to_owned_string, PtrContainer},
-    into_cstr,
-};
+use crate::{error, helper::convert_inner_to_owned_string, into_cstr, ptrc::PtrContainer};
 
 use super::logical_type::{LogicaType, LogicalTypeID};
 

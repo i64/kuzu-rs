@@ -1,4 +1,4 @@
-use crate::helper::PtrContainer;
+use crate::ptrc::PtrContainer;
 
 use crate::{error, ffi};
 

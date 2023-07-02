@@ -3,8 +3,9 @@ use std::{collections::HashMap, marker::PhantomData, rc::Rc};
 use crate::{
     connection::Connection,
     error,
-    helper::{convert_inner_to_owned_string, PtrContainer},
+    helper::convert_inner_to_owned_string,
     into_cstr,
+    ptrc::PtrContainer,
     types::{row::Row, value::KuzuValue},
 };
 

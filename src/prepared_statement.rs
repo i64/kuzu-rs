@@ -1,7 +1,7 @@
 use crate::connection::{self, Connection};
 use crate::ffi::kuzu_prepared_statement;
-use crate::helper::PtrContainer;
 use crate::helper::{convert_inner_to_owned_string, CCow};
+use crate::ptrc::PtrContainer;
 use crate::query_result::QueryResult;
 use crate::types::value::KuzuValue;
 use crate::{error, ffi, into_cstr};

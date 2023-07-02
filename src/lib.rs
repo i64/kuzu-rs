@@ -1,3 +1,4 @@
+#![feature(concat_idents)]
 #![doc = include_str!("../README.md")]
 
 /// Module for handling database connections.
@@ -24,3 +25,4 @@ pub(crate) use libkuzudb_sys as ffi;
 
 /// Module containing helper functions and types for internal use.
 pub(crate) mod helper;
+pub(crate) mod ptrc;
