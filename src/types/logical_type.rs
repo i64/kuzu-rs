@@ -102,9 +102,6 @@ impl LogicaType {
 impl TryFrom<&PtrContainer<ffi::kuzu_value>> for LogicaType {
     type Error = error::Error;
     fn try_from(value: &PtrContainer<ffi::kuzu_value>) -> Result<Self, Self::Error> {
-        if value.0.is_null() {
-            return Err(error::Error::FFIGotNull("LogicalType"));
-        }
         let logical_type =
             PtrContainer::try_new(unsafe { ffi::kuzu_value_get_data_type(value.0) })?;
         logical_type.try_into()

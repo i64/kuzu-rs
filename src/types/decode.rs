@@ -1,6 +1,6 @@
 use crate::error;
 
-use super::value::{FixedList, KuzuValue, Node, Relation, VarList};
+use super::value::{FixedList, KuzuValue, Node, Relation, VarList, Struct};
 
 /// Implements the `TryFrom` trait for decoding a `KuzuValue` into a specific type.
 macro_rules! impl_decode {
@@ -35,6 +35,7 @@ impl_decode!(Node, Node);
 impl_decode!(Relation, Rel);
 impl_decode!(VarList, VarList);
 impl_decode!(FixedList, FixedList);
+impl_decode!(Struct, Struct);
 
 impl<T> TryFrom<VarList> for Vec<T>
 where

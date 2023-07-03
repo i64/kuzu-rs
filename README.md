@@ -52,10 +52,11 @@ fn main() -> Result<(), Error> {
 ## TODO
 - [ ] Missing Features
     - [x] named paramaters
-    - [ ] decoding support
+    - [x] decoding support
         - [x] primitive types
         - [x] lists
-        - [ ] structs
+        - [x] structs
+    - [ ] custom decoders
         - [ ] petagraph
     - [ ] macro support
         - [ ] from row
