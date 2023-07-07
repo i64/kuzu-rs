@@ -20,7 +20,7 @@ impl Connection {
     /// Creates a new connection to the specified database.
     pub fn new(database: &mut database::Database) -> error::Result<Self> {
         unsafe {
-            let this = PtrContainer::try_new(ffi::kuzu_connection_init(database.0))?;
+            let this = PtrContainer::try_new(ffi::kuzu_connection_init(database.inner.0))?;
             Ok(Self {
                 inner: RefCell::new(this),
                 tx_stats: TransactionStats::default(),
@@ -53,12 +53,6 @@ impl Connection {
             TransactionType::Readonly => self.tx_stats.r += 1,
         }
         Ok(Transaction::new(self, transaction_type))
-    }
-}
-
-impl Drop for Connection {
-    fn drop(&mut self) {
-        unsafe { ffi::kuzu_connection_destroy(self.to_inner()) }
     }
 }
 

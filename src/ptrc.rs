@@ -27,7 +27,7 @@ where
     }
 
     pub fn is_valid(&self) -> bool {
-        self.0.is_null()
+        !self.0.is_null()
     }
 }
 
@@ -44,39 +44,24 @@ pub(crate) trait CustomDrop {
     fn _drop(&mut self);
 }
 
-use crate::ffi::{
-    kuzu_connection, kuzu_logical_type, kuzu_node_val, kuzu_prepared_statement, kuzu_query_result,
-    kuzu_rel_val, kuzu_value,
-};
 
-use crate::ffi::{
-    kuzu_connection_destroy, kuzu_data_type_destroy, kuzu_node_val_destroy,
-    kuzu_prepared_statement_destroy, kuzu_query_result_destroy, kuzu_rel_val_destroy,
-    kuzu_value_destroy,
-};
 macro_rules! drop_ptr_container {
-    ($struct_name:ident) => {
-        impl CustomDrop for PtrContainer<$struct_name> {
+    ($struct_name:ident, $destroyer:ident) => {
+        impl CustomDrop for PtrContainer<$crate::ffi::$struct_name> {
             fn _drop(&mut self) {
                 if self.is_valid() {
-                    unsafe { concat_idents!($struct_name, _destroy)(self.0) }
+                    unsafe { $crate::ffi::$destroyer(self.0) }
                 }
             }
         }
     };
 }
 
-impl CustomDrop for PtrContainer<kuzu_logical_type> {
-    fn _drop(&mut self) {
-        if self.is_valid() {
-            unsafe { kuzu_data_type_destroy(self.0) }
-        }
-    }
-}
-
-drop_ptr_container!(kuzu_connection);
-drop_ptr_container!(kuzu_node_val);
-drop_ptr_container!(kuzu_prepared_statement);
-drop_ptr_container!(kuzu_query_result);
-drop_ptr_container!(kuzu_rel_val);
-drop_ptr_container!(kuzu_value);
+drop_ptr_container!(kuzu_connection, kuzu_connection_destroy);
+drop_ptr_container!(kuzu_node_val, kuzu_node_val_destroy);
+drop_ptr_container!(kuzu_prepared_statement, kuzu_prepared_statement_destroy);
+drop_ptr_container!(kuzu_query_result, kuzu_query_result_destroy);
+drop_ptr_container!(kuzu_rel_val, kuzu_rel_val_destroy);
+drop_ptr_container!(kuzu_value, kuzu_value_destroy);
+drop_ptr_container!(kuzu_database, kuzu_database_destroy);
+drop_ptr_container!(kuzu_logical_type, kuzu_data_type_destroy);

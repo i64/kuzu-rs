@@ -368,7 +368,7 @@ pub struct Struct {
 
 impl Struct {
     /// Retrieves the KuzuValue associated with the specified key, if it exists.
-    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&KuzuValue>{
+    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&KuzuValue> {
         let upper_key = key.as_ref().to_uppercase();
         self.inner.get(&upper_key)
     }

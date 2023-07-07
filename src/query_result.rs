@@ -60,12 +60,6 @@ impl QueryResult {
     }
 }
 
-impl Drop for QueryResult {
-    fn drop(&mut self) {
-        unsafe { ffi::kuzu_query_result_destroy(self.0 .0) }
-    }
-}
-
 /// Iterator over the rows of a query result.
 pub struct Iter<'qr, R: TryFrom<Row>> {
     inner: &'qr QueryResult,

@@ -2,6 +2,7 @@ use crate::ffi;
 use crate::into_cstr;
 
 use crate::error;
+use crate::ptrc::PtrContainer;
 
 /// Represents different log levels.
 #[derive(Clone)]
@@ -64,7 +65,9 @@ impl DatabaseBuilder {
 
 /// Represents a database instance.
 #[repr(C)]
-pub struct Database(pub *mut ffi::kuzu_database);
+pub struct Database {
+    pub(crate) inner: PtrContainer<ffi::kuzu_database>,
+}
 
 impl Database {
     /// Creates a new `DatabaseBuilder` instance with the specified database path.
@@ -74,19 +77,15 @@ impl Database {
     /// Creates a new database instance.
     pub fn new<S: AsRef<str>>(database_path: S, buffer_pool_size: u64) -> error::Result<Database> {
         let cstring_path = into_cstr!(database_path.as_ref())?;
-        let this = unsafe { ffi::kuzu_database_init(cstring_path.as_ptr(), buffer_pool_size) };
-        Ok(Self(this))
+        let this = PtrContainer::try_new(unsafe {
+            ffi::kuzu_database_init(cstring_path.as_ptr(), buffer_pool_size)
+        })?;
+        Ok(Self { inner: this })
     }
     /// Sets the logging level for the database.
     pub fn set_logging_level(log_level: &LogLevel) -> error::Result<()> {
         let cstring_log_level = into_cstr!(log_level.as_str())?;
         unsafe { ffi::kuzu_database_set_logging_level(cstring_log_level.as_ptr()) };
         Ok(())
-    }
-}
-
-impl Drop for Database {
-    fn drop(&mut self) {
-        unsafe { ffi::kuzu_database_destroy(self.0) }
     }
 }
