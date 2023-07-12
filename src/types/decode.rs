@@ -2,16 +2,18 @@ use crate::error;
 
 use super::value::{FixedList, KuzuValue, Node, Relation, Struct, VarList};
 
-/// Implements the `TryFrom` trait for decoding a `KuzuValue` into a specific type.
+pub trait Decode: Sized {
+    fn decode_kuzuval(value: KuzuValue) -> error::Result<Self>;
+}
+
+/// Implements the `Decode` trait for decoding a `KuzuValue` into a specific type.
 macro_rules! impl_decode {
     ($ty:ty, $inner:ident) => {
-        impl TryFrom<KuzuValue> for $ty {
-            type Error = error::Error;
-
+        impl Decode for $ty {
             /// Tries to convert a `KuzuValue` into the specified type.
             /// If the conversion is successful, it returns the inner value.
             /// Otherwise, it returns a `DecodeError` with the type name of the value.
-            fn try_from(value: KuzuValue) -> Result<Self, Self::Error> {
+            fn decode_kuzuval(value: KuzuValue) -> error::Result<Self> {
                 match value {
                     KuzuValue::$inner(inner) => Ok(inner),
                     ty => Err(error::Error::DecodeError(
@@ -37,23 +39,11 @@ impl_decode!(VarList, VarList);
 impl_decode!(FixedList, FixedList);
 impl_decode!(Struct, Struct);
 
-impl<T> TryFrom<VarList> for Vec<T>
+impl<T> Decode for Vec<T>
 where
-    T: TryFrom<KuzuValue, Error = error::Error>,
+    T: Decode,
 {
-    type Error = error::Error;
-
-    fn try_from(value: VarList) -> Result<Self, Self::Error> {
-        value.inner.into_iter().map(|el| el.try_into()).collect()
-    }
-}
-
-impl<T> TryFrom<KuzuValue> for Vec<T>
-where
-    T: TryFrom<KuzuValue, Error = error::Error>,
-{
-    type Error = error::Error;
-    fn try_from(value: KuzuValue) -> Result<Self, Self::Error> {
+    fn decode_kuzuval(value: KuzuValue) -> error::Result<Self> {
         match value {
             KuzuValue::VarList(inner) => inner.try_into(),
             KuzuValue::FixedList(inner) => inner.try_into(),
@@ -67,12 +57,29 @@ where
 
 impl<T> TryFrom<FixedList> for Vec<T>
 where
-    T: TryFrom<KuzuValue, Error = error::Error>,
+    T: Decode,
 {
     type Error = error::Error;
 
     fn try_from(value: FixedList) -> Result<Self, Self::Error> {
-        value.inner.into_iter().map(|el| el.try_into()).collect()
+        value.inner.into_iter().map(T::decode_kuzuval).collect()
+    }
+}
+
+impl Decode for KuzuValue {
+    fn decode_kuzuval(value: KuzuValue) -> error::Result<Self> {
+        Ok(value)
+    }
+}
+
+impl<T> TryFrom<VarList> for Vec<T>
+where
+    T: Decode,
+{
+    type Error = error::Error;
+
+    fn try_from(value: VarList) -> Result<Self, Self::Error> {
+        value.inner.into_iter().map(T::decode_kuzuval).collect()
     }
 }
 
@@ -88,34 +95,34 @@ mod tests {
 
     fn test_type<ST, A, B, C, D, E, F, G, H, I, J>(wrapped_val: KuzuValue, result: ST)
     where
-        ST: TryFrom<KuzuValue, Error = error::Error> + Debug + PartialEq,
-        A: TryFrom<KuzuValue>,
-        B: TryFrom<KuzuValue>,
-        C: TryFrom<KuzuValue>,
-        D: TryFrom<KuzuValue>,
-        E: TryFrom<KuzuValue>,
-        F: TryFrom<KuzuValue>,
-        G: TryFrom<KuzuValue>,
-        H: TryFrom<KuzuValue>,
-        I: TryFrom<KuzuValue>,
-        J: TryFrom<KuzuValue>,
+        ST: Decode + Debug + PartialEq,
+        A: Decode,
+        B: Decode,
+        C: Decode,
+        D: Decode,
+        E: Decode,
+        F: Decode,
+        G: Decode,
+        H: Decode,
+        I: Decode,
+        J: Decode,
     {
         {
-            let res = ST::try_from(wrapped_val.clone());
+            let res = ST::decode_kuzuval(wrapped_val.clone());
             assert!(res.is_ok());
             assert_eq!(res.unwrap(), result);
         }
 
-        assert!(A::try_from(wrapped_val.clone()).is_err());
-        assert!(B::try_from(wrapped_val.clone()).is_err());
-        assert!(C::try_from(wrapped_val.clone()).is_err());
-        assert!(D::try_from(wrapped_val.clone()).is_err());
-        assert!(E::try_from(wrapped_val.clone()).is_err());
-        assert!(F::try_from(wrapped_val.clone()).is_err());
-        assert!(G::try_from(wrapped_val.clone()).is_err());
-        assert!(H::try_from(wrapped_val.clone()).is_err());
-        assert!(I::try_from(wrapped_val.clone()).is_err());
-        assert!(J::try_from(wrapped_val.clone()).is_err());
+        assert!(A::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(B::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(C::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(D::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(E::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(F::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(G::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(H::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(I::decode_kuzuval(wrapped_val.clone()).is_err());
+        assert!(J::decode_kuzuval(wrapped_val.clone()).is_err());
     }
 
     #[test]

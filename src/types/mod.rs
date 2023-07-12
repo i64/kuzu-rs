@@ -1,5 +1,5 @@
 /// Module for decoding functionality.
-pub(super) mod decode;
+pub mod decode;
 
 /// Module for encoding functionality.
 pub(super) mod encode;

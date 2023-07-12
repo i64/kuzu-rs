@@ -47,4 +47,6 @@ pub enum Error {
     /// Error indicating that a list can only have one type inside it.
     #[error("A list can only have one type inside it")]
     ListTypeError,
+    // // Nothing
+    // Infallible,
 }

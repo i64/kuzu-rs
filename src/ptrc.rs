@@ -44,7 +44,6 @@ pub(crate) trait CustomDrop {
     fn _drop(&mut self);
 }
 
-
 macro_rules! drop_ptr_container {
     ($struct_name:ident, $destroyer:ident) => {
         impl CustomDrop for PtrContainer<$crate::ffi::$struct_name> {
