@@ -26,3 +26,5 @@ pub(crate) use libkuzudb_sys as ffi;
 /// Module containing helper functions and types for internal use.
 pub(crate) mod helper;
 pub(crate) mod ptrc;
+
+pub use kuzu_macros as macros;

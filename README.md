@@ -17,6 +17,12 @@ KuzuDB-rs is a Rust wrapper for interacting with the [Kuzu graph database](https
 ```rust
 use kuzu_rs::{connection::Connection, database::Database, error::Error, types::row::Row};
 
+#[derive(FromKuzuRow, Debug)]
+struct MyRow {
+    str1: String,
+    str2: String,
+}
+
 fn main() -> Result<(), Error> {
     let database_path = "test2";
 
@@ -45,6 +51,14 @@ fn main() -> Result<(), Error> {
     //     // str1: Зарегистрируйтесь, σπαθιοῦ, Yen [jɛn], kΩ, str2: abc
     // }
 
+    // let query = "RETURN 'Зарегистрируйтесь, σπαθιοῦ, Yen [jɛn], kΩ' AS str1, 'abc' as str2;";
+    // let result = conn.query(query)?;
+
+    // for row in result.iter::<MyRow>()? {
+    //     println!("str1: {}, str2: {}", row.str1, row.str2);
+    //     // str1: Зарегистрируйтесь, σπαθιοῦ, Yen [jɛn], kΩ, str2: abc
+    // }
+
     Ok(())
 }
 ```
@@ -58,9 +72,9 @@ fn main() -> Result<(), Error> {
         - [x] structs
     - [ ] custom decoders
         - [ ] petagraph
-    - [ ] macro support
-        - [ ] from row
-        - [ ] into a struct
+    - [x] macro support
+        - [x] from row
+        - [x] into a struct
 - [x] Dynamic building & linking
 - [ ] Tests
     - [ ] Unit tests

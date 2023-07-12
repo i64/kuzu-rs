@@ -8,12 +8,16 @@ edition = "2021"
 [dependencies]
 thiserror = "1.0.24"
 libkuzudb-sys = { path = "libkuzudb-sys" }
+kuzu-macros = { path = "kuzu-macros" }
 
 [workspace]
-members = ["libkuzudb-sys"]
+members = ["libkuzudb-sys", "kuzu-macros"]
 
 [[examples]]
 name = "basic"
 
 [[examples]]
 name = "transaction"
+
+[[examples]]
+name = "derive"

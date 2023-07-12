@@ -55,6 +55,12 @@ where
     }
 }
 
+impl Decode for KuzuValue {
+    fn decode_kuzuval(value: KuzuValue) -> error::Result<Self> {
+        Ok(value)
+    }
+}
+
 impl<T> TryFrom<FixedList> for Vec<T>
 where
     T: Decode,
@@ -63,12 +69,6 @@ where
 
     fn try_from(value: FixedList) -> Result<Self, Self::Error> {
         value.inner.into_iter().map(T::decode_kuzuval).collect()
-    }
-}
-
-impl Decode for KuzuValue {
-    fn decode_kuzuval(value: KuzuValue) -> error::Result<Self> {
-        Ok(value)
     }
 }
 

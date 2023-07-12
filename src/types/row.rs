@@ -20,17 +20,18 @@ impl Row {
 
     /// Returns a reference to the `KuzuValue` if it exists, or an `Error::ColumnNotFound` if the index is out of bounds.
     pub fn get_ref(&self, idx: usize) -> error::Result<&KuzuValue> {
-        self.values
-            .get(idx)
-            .ok_or(error::Error::ColumnNotFound(idx.to_string()))
+        self.values.get(idx).ok_or(error::Error::ColumnNotFound(
+            idx.to_string(),
+            self.keys.keys().cloned().collect(),
+        ))
     }
 
     /// Returns the converted value if it exists, or an `Error::ColumnNotFound`  if the index is out of bounds, or `Error::DecodeError` if the the wrong type is specified.
     pub fn get_val<T: Decode>(&self, idx: usize) -> error::Result<T> {
-        let val = self
-            .values
-            .get(idx)
-            .ok_or(error::Error::ColumnNotFound(idx.to_string()))?;
+        let val = self.values.get(idx).ok_or(error::Error::ColumnNotFound(
+            idx.to_string(),
+            self.keys.keys().cloned().collect(),
+        ))?;
 
         T::decode_kuzuval(val.clone())
     }
@@ -40,7 +41,10 @@ impl Row {
         let key_idx = self
             .keys
             .get(column_name.as_ref())
-            .ok_or(error::Error::ColumnNotFound(column_name.as_ref().into()))?;
+            .ok_or(error::Error::ColumnNotFound(
+                column_name.as_ref().into(),
+                self.keys.keys().cloned().collect(),
+            ))?;
         let inner_val = unsafe { self.values.get_unchecked(*key_idx) };
 
         Ok(inner_val)
@@ -51,7 +55,10 @@ impl Row {
         let key_idx = self
             .keys
             .get(column_name.as_ref())
-            .ok_or(error::Error::ColumnNotFound(column_name.as_ref().into()))?;
+            .ok_or(error::Error::ColumnNotFound(
+                column_name.as_ref().into(),
+                self.keys.keys().cloned().collect(),
+            ))?;
 
         let inner_val = unsafe { self.values.get_unchecked(*key_idx) };
         T::decode_kuzuval(inner_val.clone())
@@ -70,7 +77,7 @@ macro_rules! impl_from_row_for_tuple {
 
             #[inline]
             fn try_from(row: Row) -> Result<Self, Self::Error> {
-                Ok(($(row.get_val::<$T>($idx)?,)+))
+                Ok(($(row.get_val($idx)?,)+))
              }
         }
     };

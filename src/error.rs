@@ -19,8 +19,8 @@ pub enum Error {
     DecodeError(&'static str, &'static str),
 
     /// Error that occurs when a column is not found.
-    #[error("Column {0} not found")]
-    ColumnNotFound(String),
+    #[error("Column {0} not found. ({1:?})")]
+    ColumnNotFound(String, Vec<String>),
 
     /// Error that occurs while getting a query result.
     #[error("Error while getting query result: {0}")]
