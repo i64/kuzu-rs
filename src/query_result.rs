@@ -38,7 +38,7 @@ impl QueryResult {
     /// Each iteration produces a `TryFrom<Row>` object, which represents a single row of the result set.
     ///
     /// Returns an error if there is an issue retrieving the rows from the query result.
-    pub fn iter<R: TryFrom<Row>>(&self) -> error::Result<Iter<R>> {
+    pub fn iter<R: TryFrom<Row>>(self) -> error::Result<Iter<R>> {
         let len = unsafe { ffi::kuzu_query_result_get_num_tuples(self.0 .0) } as usize;
         let column_len = unsafe { ffi::kuzu_query_result_get_num_columns(self.0 .0) };
 
@@ -61,14 +61,14 @@ impl QueryResult {
 }
 
 /// Iterator over the rows of a query result.
-pub struct Iter<'qr, R: TryFrom<Row>> {
-    inner: &'qr QueryResult,
+pub struct Iter<R: TryFrom<Row>> {
+    inner: QueryResult,
     columns: Rc<HashMap<String, usize>>,
     len: usize,
     _m: PhantomData<R>,
 }
 
-impl<'a, R> Iterator for Iter<'a, R>
+impl<R> Iterator for Iter<R>
 where
     R: TryFrom<Row>,
 {
